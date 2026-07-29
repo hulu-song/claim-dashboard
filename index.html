@@ -211,17 +211,20 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
   <!-- 索赔单 -->
   <div class="module" id="mod-claim">
-    <!-- 顶部栏：标题+上传按钮 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <!-- 顶部栏 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
       <div>
         <h2 style="font-size:24px;font-weight:800;margin:0">📋 索赔单分析</h2>
-        <p style="font-size:13px;color:var(--t3);margin-top:4px">上传数据后自动匹配字段并生成看板</p>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="claim-status">请上传数据开始分析</p>
       </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div id="cache-claim" class="cache-bar hidden" style="margin:0;padding:8px 14px"><span>💾</span><span id="ct-claim"></span><button onclick="dlStandalone('claim')" style="border-color:var(--p);color:var(--p)">📥 下载带数据HTML</button><button onclick="clearMod('claim')">🗑️ 清除</button></div>
-        <div class="up-box" id="ub-claim" style="padding:10px 20px;border-radius:10px;margin:0;flex:none"><div><span class="ub" style="margin:0;padding:8px 18px;font-size:13px">📤 上传文件</span></div><input type="file" id="fi-claim" accept=".csv,.xlsx,.xls"></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-r btn-sm" onclick="clearMod('claim')" title="清空所有数据">🗑️ 清空数据</button>
+        <button class="btn btn-ol btn-sm" onclick="dlCSV('claim')" id="btnDlCsv" disabled title="下载CSV">📥 下载数据</button>
+        <div class="up-box" id="ub-claim" style="padding:8px 16px;border-radius:10px;margin:0;flex:none;border-style:solid;border-width:1px"><span class="ub" style="margin:0;padding:6px 14px;font-size:12px">📤 上传数据</span><input type="file" id="fi-claim" accept=".csv,.xlsx,.xls"></div>
       </div>
     </div>
+    <!-- 缓存状态提示 -->
+    <div id="cache-debug" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--t3);margin-bottom:16px;display:none"></div>
     <!-- 四大模块 -->
     <div id="four-cards-claim"></div>
     <!-- 看板 -->
@@ -340,7 +343,6 @@ const chartInstances={};
 function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
 
 let currentMod='warranty';
-const dashReady={};// 看板是否已渲染完成
 
 function switchMod(id){
   currentMod=id;
@@ -348,17 +350,13 @@ function switchMod(id){
   document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod-'+id));
   const md=MOD_DATA[id];
   const dash=document.getElementById('dash-'+id);
+  if(!dash)return;
   if(md&&md.data&&md.data.length){
     dash.classList.remove('hidden');
     const dp=document.getElementById('detail-'+id);
     if(dp){dp.style.display='none';dp.classList.remove('active')}
-    if(!dashReady[id]){
-      dashReady[id]=true;
-      // 用两个 rAF 确保模块已渲染、canvas 有宽度
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        try{showDash(id)}catch(e){console.error('渲染失败:',e)}
-      }));
-    }
+    // 每次切换都重新渲染（简单可靠，避免状态不一致）
+    setTimeout(()=>{try{showDash(id)}catch(e){console.error('渲染失败:',e)}},300);
   }
 }
 
@@ -380,9 +378,69 @@ function backToDash(modId){
 function detectField(heads,targets){const norm=heads.map(h=>h.replace(/[\s\(\)（）_\-]/g,'').toLowerCase());for(const t of targets){const tc=t.replace(/[\s\(\)（）_\-]/g,'').toLowerCase();const i=norm.findIndex(h=>h===tc||h.includes(tc));if(i!==-1)return heads[i]}return''}
 function detectAll(id,heads){const cfg=MODS[id].fields;const fm={};for(const[k,targets]of Object.entries(cfg))fm[k]=detectField(heads,targets);if(!fm.supplier){const i=heads.findIndex(h=>h.includes('供应'));if(i!==-1)fm.supplier=heads[i]}if(!fm.fee){const i=heads.findIndex(h=>h.includes('费用')||h.includes('金额'));if(i!==-1)fm.fee=heads[i]}if(!fm.region){const i=heads.findIndex(h=>h.includes('国家')||h.includes('地区')||h.includes('市场'));if(i!==-1)fm.region=heads[i]}if(!fm.faultType){const i=heads.findIndex(h=>h.includes('故障')||h.includes('问题')||h.includes('缺陷'));if(i!==-1)fm.faultType=heads[i]}return fm}
 
-function saveMod(id){const md=MOD_DATA[id];if(!md||!md.data||!md.data.length)return;try{const json=JSON.stringify({d:md.data,h:md.heads,t:Date.now()});localStorage.setItem(MODS[id].cacheKey,json);console.log('[缓存] 保存成功:',id,md.data.length+'条','key='+MODS[id].cacheKey)}catch(e){console.error('[缓存] 保存失败:',id,e)}}
-function loadMod(id){try{const key=MODS[id].cacheKey;const r=localStorage.getItem(key);if(!r){console.log('[缓存] 无数据:',id,'key='+key);return false}const o=JSON.parse(r);if(o&&Array.isArray(o.d)&&o.d.length>0&&Array.isArray(o.h)&&o.h.length>0){MOD_DATA[id]={data:o.d,heads:o.h,fm:{}};console.log('[缓存] 加载成功:',id,o.d.length+'条');return true}console.log('[缓存] 数据格式无效:',id);return false}catch(e){console.error('[缓存] 加载失败:',id,e);return false}}
-function clearMod(id){try{localStorage.removeItem(MODS[id].cacheKey)}catch(e){}MOD_DATA[id]={data:[],heads:[],fm:{}};dashReady[id]=false;document.getElementById('cache-'+id).classList.add('hidden');document.getElementById('dash-'+id).classList.add('hidden');document.getElementById('dash-'+id).innerHTML='';const dp=document.getElementById('detail-'+id);if(dp){dp.style.display='none';dp.classList.remove('active');dp.innerHTML=''}updateInfo(id);updateBadge(id)}
+// ── IndexedDB 缓存（支持大数据量） ──
+const DB_NAME='ClaimDashboardDB';
+const DB_VER=1;
+let db=null;
+
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    if(db)return resolve(db);
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{e.target.result.createObjectStore('modules',{keyPath:'id'})};
+    req.onsuccess=e=>{db=e.target.result;resolve(db)};
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+
+async function saveMod(id){
+  const md=MOD_DATA[id];if(!md||!md.data||!md.data.length)return;
+  try{
+    const d=await openDB();
+    const tx=d.transaction('modules','readwrite');
+    tx.objectStore('modules').put({id,data:md.data,heads:md.heads,ts:Date.now()});
+    tx.oncomplete=()=>console.log('[IndexedDB] 保存成功:',id,md.data.length+'条');
+    tx.onerror=e=>console.error('[IndexedDB] 保存失败:',id,e);
+  }catch(e){console.error('[IndexedDB] 保存异常:',id,e)}
+}
+
+async function loadMod(id){
+  try{
+    const d=await openDB();
+    return new Promise(resolve=>{
+      const tx=d.transaction('modules','readonly');
+      const req=tx.objectStore('modules').get(id);
+      req.onsuccess=()=>{
+        const o=req.result;
+        if(o&&Array.isArray(o.data)&&o.data.length>0&&Array.isArray(o.heads)&&o.heads.length>0){
+          MOD_DATA[id]={data:o.data,heads:o.heads,fm:{}};
+          console.log('[IndexedDB] 加载成功:',id,o.data.length+'条');
+          resolve(true);
+        }else resolve(false);
+      };
+      req.onerror=()=>resolve(false);
+    });
+  }catch(e){console.error('[IndexedDB] 加载异常:',id,e);return false}
+}
+
+async function clearModFromDB(id){
+  try{const d=await openDB();const tx=d.transaction('modules','readwrite');tx.objectStore('modules').delete(id)}catch(e){}
+}
+function clearMod(id){
+  clearModFromDB(id);
+  MOD_DATA[id]={data:[],heads:[],fm:{}};
+  document.getElementById('cache-'+id).classList.add('hidden');
+  document.getElementById('dash-'+id).classList.add('hidden');
+  document.getElementById('dash-'+id).innerHTML='';
+  const dp=document.getElementById('detail-'+id);
+  if(dp){dp.style.display='none';dp.classList.remove('active');dp.innerHTML=''}
+  updateInfo(id);updateBadge(id);
+  if(id==='claim'){
+    const st=document.getElementById('claim-status');if(st)st.textContent='请上传数据开始分析';
+    const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=true;
+    const dbg=document.getElementById('cache-debug');if(dbg)dbg.innerHTML='📭 暂无缓存数据';
+  }
+}
 
 function setupUpload(id){const ub=document.getElementById('ub-'+id),fi=document.getElementById('fi-'+id);if(!ub||!fi)return;ub.addEventListener('click',()=>fi.click());ub.addEventListener('dragover',e=>{e.preventDefault();ub.classList.add('over')});ub.addEventListener('dragleave',()=>ub.classList.remove('over'));ub.addEventListener('drop',e=>{e.preventDefault();ub.classList.remove('over');if(e.dataTransfer.files.length)handleFile(id,e.dataTransfer.files[0])});fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(id,e.target.files[0])})}
 function handleFile(id,f){const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){const r=new FileReader();r.onload=e=>parseCSV(id,e.target.result);r.readAsText(f)}else if(ext==='xlsx'||ext==='xls'){const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});loadData(id,XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){alert('解析失败: '+err.message)}};r.readAsArrayBuffer(f)}else alert('请上传 CSV/XLSX/XLS 文件')}
@@ -393,12 +451,17 @@ function loadData(id,rows){
   if(!rows||!rows.length)return alert('无数据');
   const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
   MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-  dashReady[id]=false;// 重置，强制重新渲染
+  saveMod(id);updateInfo(id);updateBadge(id);
+  // 更新状态文字
+  const statusEl=document.getElementById('claim-status');
+  if(statusEl)statusEl.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+  // 启用下载按钮
+  const dlBtn=document.getElementById('btnDlCsv');
+  if(dlBtn)dlBtn.disabled=false;
+  // 清空旧看板，触发渲染
   const dash=document.getElementById('dash-'+id);
   if(dash)dash.innerHTML='';
-  saveMod(id);updateInfo(id);updateBadge(id);
-  if(currentMod!==id){switchMod(id)}
-  else{dashReady[id]=true;setTimeout(()=>{try{showDash(id)}catch(e){console.error(e)}},100)}
+  switchMod(id);
 }
 
 function updateInfo(id){const md=MOD_DATA[id];if(!md||!md.data.length){['ui-t-','ui-s-','ui-c-','ui-o-','ui-a-','ui-r-'].forEach(p=>{const e=document.getElementById(p+id);if(e)e.textContent='0'});return}
@@ -498,46 +561,50 @@ function showDash(id){
     dash.innerHTML=html;dash.classList.remove('hidden');
   }
 
-  setTimeout(()=>{
+  function drawCharts(attempt){
+    attempt=attempt||0;
     try{
-    const cv1=document.getElementById('ch-'+id+'-sup');
-    if(cv1&&cv1.parentElement&&cv1.parentElement.clientWidth>0){
+      const cv1=document.getElementById('ch-'+id+'-sup');
+      if(!cv1||!cv1.parentElement||cv1.parentElement.clientWidth<=0){
+        if(attempt<20){setTimeout(()=>drawCharts(attempt+1),100);return}
+        console.warn('canvas 未就绪，跳过图表绘制');return;
+      }
       const t10=supFK.slice(0,10);
       destroyChart('ch-'+id+'-sup');
       chartInstances['ch-'+id+'-sup']=new Chart(cv1,{type:'bar',data:{labels:t10.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'索赔数量',data:t10.map(k=>supF[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
-    }
 
-    if(faultKeys.length){
-      const cv2=document.getElementById('ch-'+id+'-fault');
-      if(cv2&&cv2.parentElement&&cv2.parentElement.clientWidth>0){
-        const fTop=faultKeys.slice(0,8);
-        destroyChart('ch-'+id+'-fault');
-        chartInstances['ch-'+id+'-fault']=new Chart(cv2,{type:'doughnut',data:{labels:fTop.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:fTop.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
+      if(faultKeys.length){
+        const cv2=document.getElementById('ch-'+id+'-fault');
+        if(cv2&&cv2.parentElement&&cv2.parentElement.clientWidth>0){
+          const fTop=faultKeys.slice(0,8);
+          destroyChart('ch-'+id+'-fault');
+          chartInstances['ch-'+id+'-fault']=new Chart(cv2,{type:'doughnut',data:{labels:fTop.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:fTop.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
+        }
       }
-    }
 
-    if(monthKeys.length>1){
-      const cv3=document.getElementById('ch-'+id+'-month');
-      if(cv3&&cv3.parentElement&&cv3.parentElement.clientWidth>0){
-        destroyChart('ch-'+id+'-month');
-        chartInstances['ch-'+id+'-month']=new Chart(cv3,{type:'line',data:{labels:monthKeys,datasets:[{label:'索赔数量',data:monthKeys.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+      if(monthKeys.length>1){
+        const cv3=document.getElementById('ch-'+id+'-month');
+        if(cv3&&cv3.parentElement&&cv3.parentElement.clientWidth>0){
+          destroyChart('ch-'+id+'-month');
+          chartInstances['ch-'+id+'-month']=new Chart(cv3,{type:'line',data:{labels:monthKeys,datasets:[{label:'索赔数量',data:monthKeys.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+        }
       }
-    }
 
-    if(modelKeys.length){
-      const cv4=document.getElementById('ch-'+id+'-model');
-      if(cv4&&cv4.parentElement&&cv4.parentElement.clientWidth>0){
-        const mTop=modelKeys.slice(0,8);
-        destroyChart('ch-'+id+'-model');
-        chartInstances['ch-'+id+'-model']=new Chart(cv4,{type:'bar',data:{labels:mTop.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'数量',data:mTop.map(k=>byModel[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:CHART_COLORS.slice(0,8),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+      if(modelKeys.length){
+        const cv4=document.getElementById('ch-'+id+'-model');
+        if(cv4&&cv4.parentElement&&cv4.parentElement.clientWidth>0){
+          const mTop=modelKeys.slice(0,8);
+          destroyChart('ch-'+id+'-model');
+          chartInstances['ch-'+id+'-model']=new Chart(cv4,{type:'bar',data:{labels:mTop.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'数量',data:mTop.map(k=>byModel[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:CHART_COLORS.slice(0,8),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+        }
       }
-    }
 
-    renderList(id,supFK.slice(0,tL),supFK.slice(0,tL).map(k=>supF[k].length),supF);
-    buildTable(id,data,false);
-    const fi=document.getElementById('fi-'+id);if(fi)fi.value='';
+      renderList(id,supFK.slice(0,tL),supFK.slice(0,tL).map(k=>supF[k].length),supF);
+      buildTable(id,data,false);
+      const fi=document.getElementById('fi-'+id);if(fi)fi.value='';
     }catch(e){console.error('图表渲染失败:',e)}
-  },150);
+  }
+  setTimeout(()=>drawCharts(0),200);
 }
 
 function kpi(label,val,detail,onclick){return'<div class="kpi"'+(onclick?' onclick="'+onclick+'"':'')+'><div class="kl">'+label+'</div><div class="kv">'+val+'</div><div class="kd">'+detail+'</div></div>'}
@@ -761,35 +828,40 @@ function dlStandalone(modId){
 renderPolicyGrid();
 let cachedMod='';
 
-// 优先检查内嵌数据（分享场景）
+// 优先检查内嵌数据
 if(window.EMBED_DATA&&window.EMBED_DATA.d&&window.EMBED_DATA.d.length){
   const em=window.EMBED_DATA;
   MOD_DATA[em.mod]={data:em.d,heads:em.h,fm:detectAll(em.mod,em.h)};
-  saveMod(em.mod);
-  cachedMod=em.mod;
-  console.log('[内嵌数据] 已加载',em.mod,em.d.length+'条');
+  saveMod(em.mod);cachedMod=em.mod;
 }
 
-// 再检查 localStorage 缓存
-Object.keys(MODS).forEach(id=>{
-  setupUpload(id);
-  if(MOD_DATA[id]&&MOD_DATA[id].data&&MOD_DATA[id].data.length){
-    // 已从内嵌数据加载
-    document.getElementById('cache-'+id).classList.remove('hidden');
-    document.getElementById('ct-'+id).textContent='已加载内嵌数据 · '+MOD_DATA[id].data.length+' 条';
-    updateInfo(id);updateBadge(id);
-  }else if(loadMod(id)){
-    MOD_DATA[id].fm=detectAll(id,MOD_DATA[id].heads);
-    document.getElementById('cache-'+id).classList.remove('hidden');
-    let ts='';try{const o=JSON.parse(localStorage.getItem(MODS[id].cacheKey));if(o.t)ts=new Date(o.t).toLocaleString('zh-CN')}catch(e){}
-    document.getElementById('ct-'+id).textContent='缓存 ('+ts+') · '+MOD_DATA[id].data.length+' 条';
-    updateInfo(id);updateBadge(id);
-    if(!cachedMod)cachedMod=id;
-  }else{MOD_DATA[id]={data:[],heads:[],fm:{}};updateInfo(id);updateBadge(id)}
-});
+// 设置上传
+Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm:{}}});
 
-// 切换到有数据的模块
-if(cachedMod){switchMod(cachedMod)}
+// 异步加载 IndexedDB 缓存
+(async()=>{
+  for(const id of Object.keys(MODS)){
+    if(MOD_DATA[id]&&MOD_DATA[id].data&&MOD_DATA[id].data.length)continue;
+    const ok=await loadMod(id);
+    if(ok){
+      MOD_DATA[id].fm=detectAll(id,MOD_DATA[id].heads);
+      document.getElementById('cache-'+id).classList.remove('hidden');
+      const ts=new Date().toLocaleString('zh-CN');
+      document.getElementById('ct-'+id).textContent='缓存 · '+MOD_DATA[id].data.length+' 条';
+      updateInfo(id);updateBadge(id);
+      if(id==='claim'){
+        const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
+        const st=document.getElementById('claim-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
+        const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 缓存正常 · '+MOD_DATA[id].data.length+' 条 · '+ts}
+      }
+      if(!cachedMod)cachedMod=id;
+    }else{
+      updateInfo(id);updateBadge(id);
+      if(id==='claim'){const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='📭 暂无缓存数据'}}
+    }
+  }
+  if(cachedMod)switchMod(cachedMod);
+})();
 </script>
 </body>
 </html>

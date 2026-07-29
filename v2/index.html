@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二次索赔看板</title>
+<link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1118;--card:#181c26;--card2:#1e2330;--border:#2a2f3d;--border-o:rgba(249,115,22,.3);--p:#f97316;--pd:#ea580c;--pl:#fff7ed;--t1:#ffffff;--t2:#94a3b8;--t3:#64748b;--glow:0 0 20px rgba(249,115,22,.15);--r:16px;--fs:17px}
+html{font-size:100%}
+body{font-family:'Microsoft YaHei','Segoe UI',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;font-size:var(--fs);line-height:1.75;overflow:hidden}
+
+/* ── 导航栏 ── */
+.nav{width:260px;min-width:260px;height:100vh;background:#12151e;border-right:1px solid var(--border);display:flex;flex-direction:column}
+.nav-hd{padding:30px 24px 20px;border-bottom:1px solid var(--border)}
+.nav-logo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.nav-logo h1{font-size:22px;font-weight:800;color:var(--t1);margin:0}
+.nav-hd p{font-size:12px;color:var(--t3);margin-top:2px}
+.nav-list{flex:1;padding:12px 14px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:14px;padding:15px 18px;border-radius:12px;cursor:pointer;transition:all .2s;color:var(--t3);font-size:16px;font-weight:600;margin-bottom:4px;border:1px solid transparent}
+.nav-item:hover{background:rgba(249,115,22,.06);color:var(--t2);border-color:rgba(249,115,22,.1)}
+.nav-item.active{background:rgba(249,115,22,.12);color:var(--p);border-color:var(--border-o);box-shadow:var(--glow)}
+.nav-item .ni-icon{font-size:22px;width:30px;text-align:center}
+.nav-item .ni-text{flex:1}
+.nav-item .ni-badge{background:rgba(249,115,22,.15);padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;color:var(--p)}
+.nav-item.active .ni-badge{background:rgba(249,115,22,.25)}
+.nav-ft{padding:16px 20px;color:var(--t3);font-size:10px;text-align:center;border-top:1px solid var(--border);line-height:1.6}
+
+/* ── 内容区 ── */
+.content{flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column;padding-top:48px}
+.top-bar{position:fixed;top:0;right:0;left:260px;z-index:100;background:rgba(15,17,24,.95);backdrop-filter:blur(12px);padding:12px 32px;display:flex;justify-content:center;align-items:center;border-bottom:1px solid var(--border)}
+.top-bar .slogan{font-size:16px;font-weight:700;color:var(--p);letter-spacing:3px}
+.module{display:none;padding:28px 32px;flex:1}.module.active{display:flex;flex-direction:column}
+
+/* ── 卡片 ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px;transition:all .3s}
+.card:hover{border-color:var(--border-o);box-shadow:var(--glow);transform:translateY(-2px)}
+.card h2{font-size:22px;font-weight:800;margin-bottom:6px;color:var(--t1)}
+.card .sub{font-size:14px;color:var(--t2);margin-bottom:20px}
+
+/* 上传区 */
+.up-row{display:flex;gap:20px;align-items:stretch}
+.up-box{flex:1;border:2px dashed var(--border);border-radius:var(--r);padding:36px 20px;text-align:center;background:var(--card2);cursor:pointer;transition:all .3s}
+.up-box:hover,.up-box.over{border-color:var(--p);background:rgba(249,115,22,.05);box-shadow:var(--glow)}
+.up-box .ic{font-size:44px;margin-bottom:8px}
+.up-box p{font-size:13px;color:var(--t3);margin-top:6px}
+.up-box input{display:none}
+.up-box .ub{display:inline-block;padding:12px 28px;background:var(--p);color:#fff;border-radius:10px;font-weight:700;font-size:15px;margin-top:12px;transition:all .2s;box-shadow:0 4px 16px rgba(249,115,22,.3)}
+.up-box .ub:hover{background:var(--pd);box-shadow:0 6px 24px rgba(249,115,22,.4)}
+.up-info{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:26px;display:flex;flex-direction:column;justify-content:center;gap:12px}
+.up-info .ui-row{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--t2)}
+.up-info .ui-icon{font-size:22px}
+.up-info .ui-val{font-weight:800;color:var(--t1);font-size:20px}
+
+.cache-bar{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--t2);display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.cache-bar button{background:transparent;border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer;color:var(--t2);margin-left:auto;transition:all .2s}
+.cache-bar button:hover{border-color:var(--p);color:var(--p)}
+
+/* ── Tab ── */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:4px}
+.tab-btn{flex:1;padding:13px 16px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;background:transparent;color:var(--t3)}
+.tab-btn:hover{color:var(--t2)}
+.tab-btn.active{background:var(--p);color:#fff;box-shadow:0 4px 16px rgba(249,115,22,.3)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── 政策卡片 ── */
+.p-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1400px){.p-grid{grid-template-columns:repeat(2,1fr)}}
+.p-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:22px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.p-card:hover{transform:translateY(-4px);border-color:var(--border-o);box-shadow:var(--glow)}
+.p-card .pc-icon{font-size:32px;margin-bottom:10px}
+.p-card .pc-title{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--t1)}
+.p-card .pc-body{font-size:13px;color:var(--t2);line-height:1.8}
+.p-card .pc-tag{position:absolute;top:12px;right:12px;font-size:10px;background:rgba(249,115,22,.15);color:var(--p);padding:3px 10px;border-radius:6px;font-weight:700}
+
+/* ── KPI 网格 ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;transition:all .3s;cursor:pointer;position:relative;overflow:hidden}
+.kpi:hover{border-color:var(--border-o);box-shadow:var(--glow);transform:translateY(-3px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--p)}
+.kpi .kl{font-size:13px;color:var(--t3);font-weight:600}
+.kpi .kv{font-size:32px;font-weight:800;margin-top:6px;color:var(--p)}
+.kpi .kd{font-size:12px;color:var(--t3);margin-top:4px}
+
+/* ── 四大模块卡片 ── */
+.four-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}
+@media(max-width:1200px){.four-grid{grid-template-columns:repeat(2,1fr)}}
+.four-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px;transition:all .3s;cursor:pointer;position:relative;overflow:hidden}
+.four-card:hover{border-color:var(--border-o);box-shadow:0 0 30px rgba(249,115,22,.2);transform:translateY(-4px)}
+.four-card .fc-icon{font-size:40px;margin-bottom:12px}
+.four-card .fc-label{font-size:14px;color:var(--t3);font-weight:600;margin-bottom:6px}
+.four-card .fc-val{font-size:36px;font-weight:800;color:var(--p)}
+.four-card .fc-detail{font-size:12px;color:var(--t3);margin-top:8px;line-height:1.6}
+.four-card .fc-arrow{position:absolute;bottom:16px;right:20px;font-size:18px;color:var(--t3);transition:all .2s}
+.four-card:hover .fc-arrow{color:var(--p);transform:translateX(4px)}
+
+/* ── 图表网格 ── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+@media(max-width:1000px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;transition:all .3s;cursor:pointer}
+.chart-card:hover{border-color:var(--border-o);box-shadow:var(--glow);transform:translateY(-2px)}
+.chart-card h3{font-size:18px;font-weight:700;margin-bottom:4px;color:var(--t1)}
+.chart-card .cs{font-size:12px;color:var(--t3);margin-bottom:16px}
+.chart-card canvas{width:100%!important}
+
+/* ── 详情页 ── */
+.detail-page{display:none;flex-direction:column;flex:1}
+.detail-page.active{display:flex}
+.detail-hd{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.detail-hd h2{font-size:24px;font-weight:800;flex:1}
+.btn-back{padding:10px 22px;background:var(--p);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(249,115,22,.3)}
+.btn-back:hover{background:var(--pd)}
+
+/* ── 表格 ── */
+.tbl-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.tbl-card .th{display:flex;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border)}
+.tbl-card .th h3{font-size:18px;font-weight:700;flex:1;color:var(--t1)}.tbl-card .th span{font-size:13px;color:var(--t3)}
+.tw{overflow-x:auto;max-height:420px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--card2);padding:11px 16px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:1;color:var(--p)}
+td{padding:11px 16px;border-top:1px solid var(--border);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--t2)}
+tr:hover td{background:rgba(249,115,22,.04)}
+.tag{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.tag-g{background:rgba(16,185,129,.15);color:#34d399}.tag-r{background:rgba(239,68,68,.15);color:#f87171}.tag-y{background:rgba(245,158,11,.15);color:#fbbf24}
+
+/* ── 列表 ── */
+.clist{list-style:none;max-height:400px;overflow-y:auto}
+.clist li{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;gap:12px}
+.clist li:last-child{border-bottom:none}.clist li:hover{background:rgba(249,115,22,.04)}
+.clist .rk{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+.clist .nm{flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+.clist .vl{font-size:14px;font-weight:700;color:var(--p);white-space:nowrap}
+.clist .bar{width:100px;height:6px;background:var(--border);border-radius:3px;flex-shrink:0;overflow:hidden}
+.clist .bar-i{height:100%;border-radius:3px}
+.clist .aw{color:var(--t3);font-size:11px;width:16px;text-align:center}
+.clist li.exp .aw{transform:rotate(90deg)}
+.clist .dtl{display:none;padding:10px 16px 10px 52px;background:var(--card2);font-size:12px;color:var(--t3);line-height:1.8;border-bottom:1px solid var(--border)}
+.clist .dtl.show{display:block}
+
+/* ── 弹窗 ── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);z-index:9999;justify-content:center;align-items:center;padding:24px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;max-width:800px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-hd{padding:28px 32px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;position:sticky;top:0;background:var(--card);z-index:1;border-radius:18px 18px 0 0}
+.modal-hd .mh-icon{font-size:36px}
+.modal-hd h2{font-size:22px;font-weight:800;flex:1;color:var(--t1)}
+.modal-hd .mh-close{width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card2);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--t2)}
+.modal-hd .mh-close:hover{border-color:var(--p);color:var(--p)}
+.modal-bd{padding:28px 32px}
+.modal-bd h4{font-size:18px;font-weight:700;color:var(--p);margin:20px 0 10px}
+.modal-bd h4:first-child{margin-top:0}
+.modal-bd p,.modal-bd li{font-size:15px;color:var(--t2);line-height:1.9}
+.modal-bd ul{padding-left:20px;margin:8px 0}
+.modal-bd .law-box{background:rgba(249,115,22,.08);border-left:4px solid var(--p);padding:18px 22px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px;color:var(--p);line-height:1.9}
+.modal-bd .highlight{background:rgba(249,115,22,.2);padding:2px 8px;border-radius:4px;font-weight:700;color:var(--p)}
+.modal-ft{padding:18px 32px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.modal-ft a{font-size:14px;color:var(--p);text-decoration:none;font-weight:600;transition:color .2s}
+.modal-ft a:hover{color:var(--pd);text-decoration:underline}
+
+.btn{padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-o{background:var(--p);color:#fff}.btn-o:hover{background:var(--pd)}
+.btn-ol{background:transparent;color:var(--p);border:1.5px solid var(--p)}.btn-ol:hover{background:rgba(249,115,22,.1)}
+.btn-sm{padding:9px 18px;font-size:13px}
+
+.warn-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px 18px;font-size:14px;color:#f87171;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;transition:all .2s}
+.warn-box:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5)}
+.warn-box .wn{font-weight:800;color:#f87171;font-size:20px}
+
+.hidden{display:none!important}
+.ft{text-align:center;padding:16px;color:var(--t3);font-size:11px}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#2a2f3d;border-radius:3px}::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-hd">
+    <div class="nav-logo">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg" width="38" height="38" alt="小米" style="border-radius:8px">
+      <h1>二次索赔</h1>
+    </div>
+    <p>多维度质量数据看板</p>
+  </div>
+  <div class="nav-list">
+    <div class="nav-item active" data-mod="warranty" onclick="switchMod('warranty')"><span class="ni-icon">🛡️</span><span class="ni-text">三包政策</span></div>
+    <div class="nav-item" data-mod="claim" onclick="switchMod('claim')"><span class="ni-icon">📋</span><span class="ni-text">索赔单</span><span class="ni-badge" id="badge-claim">—</span></div>
+    <div class="nav-item" data-mod="settle" onclick="switchMod('settle')"><span class="ni-icon">💰</span><span class="ni-text">结算单</span><span class="ni-badge" id="badge-settle">—</span></div>
+    <div class="nav-item" data-mod="overseas" onclick="switchMod('overseas')"><span class="ni-icon">🌍</span><span class="ni-text">海外质保金</span><span class="ni-badge" id="badge-overseas">—</span></div>
+  </div>
+  <div class="nav-ft">数据仅在浏览器本地处理<br>不会上传到任何服务器</div>
+</nav>
+
+<main class="content">
+  <div class="top-bar"><span></span><span class="slogan">✨ 永远相信美好的事情即将发生 ✨</span></div>
+
+  <!-- 三包政策 -->
+  <div class="module active" id="mod-warranty">
+    <div class="card" style="border-left:4px solid var(--p)">
+      <h2>🛡️ 三包政策速查</h2>
+      <div class="sub">国家法定三包政策 & 小米汽车三包保修政策</div>
+      <div style="margin-bottom:16px"><a href="https://www.gov.cn/zhengce/zhengceku/2022-01/01/content_5665835.htm" target="_blank" class="btn btn-o" style="font-size:14px;padding:10px 22px;display:inline-block;text-decoration:none">📖 查看完整法规原文</a></div>
+      <div class="tab-bar"><button class="tab-btn active" onclick="switchTab('national')">🏛️ 国家法定三包政策</button><button class="tab-btn" onclick="switchTab('xiaomi')">🚗 小米SU7/SU7-Ultra/YU7三包&保修政策</button></div>
+      <div class="tab-panel active" id="tab-national"><div class="p-grid" id="policyGrid"></div></div>
+      <div class="tab-panel" id="tab-xiaomi"><div class="p-grid" id="xiaomiGrid"></div></div>
+    </div>
+  </div>
+
+  <!-- 索赔单 -->
+  <div class="module" id="mod-claim">
+    <!-- 顶部栏：左侧标题 + 右侧三个按钮（从右到左：上传、下载、清空） -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
+      <div>
+        <h2 style="font-size:24px;font-weight:800;margin:0">📋 索赔单分析</h2>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="claim-status">请上传数据开始分析</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-r btn-sm" onclick="clearMod('claim')" title="清空所有数据">🗑️ 清空数据</button>
+        <button class="btn btn-ol btn-sm" onclick="dlCSV('claim')" id="btnDlCsv" disabled title="下载当前数据为CSV">📥 下载数据</button>
+        <div style="position:relative;display:inline-block">
+          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
+          <input type="file" id="fi-claim" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
+        </div>
+      </div>
+    </div>
+    <!-- 缓存状态提示 -->
+    <div id="cache-debug" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--t3);margin-bottom:16px;display:none"></div>
+    <!-- 四大模块 -->
+    <div id="four-cards-claim"></div>
+    <!-- 看板 -->
+    <div class="hidden" id="dash-claim"></div>
+    <div class="detail-page" id="detail-claim"></div>
+  </div>
+
+  <!-- 结算单 -->
+  <div class="module" id="mod-settle">
+    <div class="card"><h2>💰 结算单分析</h2><div class="sub">上传结算单数据，自动生成分析看板</div>
+      <div id="cache-settle" class="cache-bar hidden"><span>💾</span><span id="ct-settle"></span><button onclick="dlStandalone('settle')" style="border-color:var(--p);color:var(--p)">📥 下载带数据HTML</button><button onclick="clearMod('settle')">🗑️ 清除</button></div>
+      <div class="up-row">
+        <div class="up-box" id="ub-settle"><div class="ic">📤</div><div><span class="ub">选择文件</span></div><p>拖拽或点击 · CSV / XLSX / XLS</p><input type="file" id="fi-settle" accept=".csv,.xlsx,.xls"></div>
+        <div class="up-info"><div class="ui-row"><span class="ui-icon">📊</span>总记录：<span class="ui-val" id="ui-t-settle">0</span></div><div class="ui-row"><span class="ui-icon">🏢</span>供应商：<span class="ui-val" id="ui-s-settle">0</span></div><div class="ui-row"><span class="ui-icon">💵</span>总金额：<span class="ui-val" id="ui-a-settle">0</span></div><div class="ui-row"><span class="ui-icon">✅</span>已结算：<span class="ui-val" id="ui-c-settle">0</span></div></div>
+      </div>
+    </div>
+    <div class="hidden" id="dash-settle"></div>
+    <div class="detail-page" id="detail-settle"></div>
+  </div>
+
+  <!-- 海外质保金 -->
+  <div class="module" id="mod-overseas">
+    <div class="card"><h2>🌍 海外质保金分析</h2><div class="sub">上传海外质保金数据，自动生成分析看板</div>
+      <div id="cache-overseas" class="cache-bar hidden"><span>💾</span><span id="ct-overseas"></span><button onclick="dlStandalone('overseas')" style="border-color:var(--p);color:var(--p)">📥 下载带数据HTML</button><button onclick="clearMod('overseas')">🗑️ 清除</button></div>
+      <div class="up-row">
+        <div class="up-box" id="ub-overseas"><div class="ic">📤</div><div><span class="ub">选择文件</span></div><p>拖拽或点击 · CSV / XLSX / XLS</p><input type="file" id="fi-overseas" accept=".csv,.xlsx,.xls"></div>
+        <div class="up-info"><div class="ui-row"><span class="ui-icon">📊</span>总记录：<span class="ui-val" id="ui-t-overseas">0</span></div><div class="ui-row"><span class="ui-icon">🏢</span>供应商：<span class="ui-val" id="ui-s-overseas">0</span></div><div class="ui-row"><span class="ui-icon">💵</span>总金额：<span class="ui-val" id="ui-a-overseas">0</span></div><div class="ui-row"><span class="ui-icon">🌍</span>国家/地区：<span class="ui-val" id="ui-r-overseas">0</span></div></div>
+      </div>
+    </div>
+    <div class="hidden" id="dash-overseas"></div>
+    <div class="detail-page" id="detail-overseas"></div>
+  </div>
+</main>
+
+<!-- 弹窗 -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd"><span class="mh-icon" id="mIcon"></span><h2 id="mTitle"></h2><button class="mh-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-bd" id="mBody"></div>
+    <div class="modal-ft" id="mFoot"></div>
+  </div>
+</div>
+
+<script>
+// ── Chart.js 深色主题配置 ──
+Chart.defaults.color='#94a3b8';
+Chart.defaults.borderColor='rgba(42,47,61,.5)';
+Chart.defaults.font.family="'Microsoft YaHei','Segoe UI',sans-serif";
+Chart.defaults.font.size=13;
+
+const CHART_COLORS=['#f97316','#f59e0b','#ef4444','#10b981','#3b82f6','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#eab308','#6366f1','#16a34a','#dc2626','#a855f7','#0ea5e9','#84cc16'];
+const CHART_BG=['rgba(249,115,22,.7)','rgba(245,158,11,.7)','rgba(239,68,68,.7)','rgba(16,185,129,.7)','rgba(59,130,246,.7)','rgba(139,92,246,.7)','rgba(6,182,212,.7)','rgba(236,72,153,.7)','rgba(20,184,166,.7)','rgba(234,179,8,.7)'];
+
+// ── 三包政策数据 ──
+const POLICIES=[
+  {id:'period',icon:'⏰',title:'三包有效期与包修期',tag:'核心',brief:'包修期≥3年/6万公里 · 三包期≥2年/5万公里 · 新能源电池电机纳入三包',law:'第十七条 家用汽车产品包修期限不低于3年或者行驶里程60,000公里，以先到者为准。\n\n第十八条 家用汽车产品三包有效期限不低于2年或者行驶里程50,000公里，以先到者为准。',detail:['<b>有效期起算：</b>自销售者开具购车发票之日起计算。','<b>包修期 vs 三包有效期：</b>包修期内免费修理；三包有效期内满足条件可退换车。','<b>新能源部件：</b>动力蓄电池、驱动电机纳入主要零部件三包范围。']},
+  {id:'seven',icon:'🔴',title:'7日内可退换',tag:'严格',brief:'交付7日内 · 更换发动机/变速器/电池/电机及主要零部件 · 可退车或换车',law:'第二十二条 家用汽车产品自三包有效期起算之日起7日内，因质量问题需要更换发动机、变速器、动力蓄电池、行驶驱动电机或者其主要零部件的，消费者可以凭购车发票、三包凭证选择更换家用汽车产品或者退货。',detail:['<b>适用范围：</b>仅针对四大总成及其主要零部件的重大质量问题。','<b>举证要求：</b>消费者需提供购车发票、三包凭证。']},
+  {id:'sixty',icon:'🟠',title:'60日/3000公里内可退换',tag:'安全',brief:'转向/制动失效 · 车身开裂/燃油泄漏 · 总成换2次仍故障',law:'第二十三条 家用汽车产品自三包有效期起算之日起60日内或者行驶里程3,000公里之内（以先到者为准），因质量问题出现转向系统失效、制动系统失效、车身开裂、燃油泄漏、动力蓄电池起火的，消费者可以凭购车发票、三包凭证选择更换家用汽车产品或者退货。',detail:['<b>时间与里程：</b><span class="highlight">任意一项先到即截止</span>。','<b>退换条件：</b>转向失效、制动失效、车身开裂、燃油泄漏、电池起火。']},
+  {id:'exchange',icon:'🟢',title:'三包有效期内退换条件',tag:'重要',brief:'安全故障修2次未排除 · 总成换2次失效 · 同一部件换2次失效 · 修超30日/5次',law:'第二十四条 三包有效期内，出现下列情形之一的，消费者可以凭购车发票、三包凭证选择更换家用汽车产品或者退货：\n（一）因严重安全性能故障累计进行2次修理，严重安全性能故障仍未排除或者又出现新的严重安全性能故障的；\n（二）发动机、变速器、动力蓄电池、行驶驱动电机因其质量问题累计更换2次后，仍不能正常使用的；\n（三）同一主要零部件因其质量问题，累计更换2次后，仍不能正常使用的；\n（四）因质量问题累计修理时间超过30日，或者因同一质量问题累计修理超过5次的。',detail:['<b>维修次数判定：</b>"累计修理"指因同一质量问题进行的修理次数。','<b>30日计算：</b>自送修至修完交车，等待配件时间计入。','<b>换车后三包：</b>自更换之日起重新计算。']},
+  {id:'loaner',icon:'🔧',title:'修理超5日补偿',tag:'权益',brief:'修理占用超5日 · 提供备用车或合理交通费用补偿',law:'第二十六条 修理者应当保持修理所需要的零部件的合理储备，确保修理工作的正常进行，避免因缺少零部件而延误修理时间。',detail:['<b>补偿条件：</b>每次修理时间超过5日（含等待零部件时间）。','<b>备用车要求：</b>满足基本出行需求，不应额外收费。']},
+  {id:'tow',icon:'🚛',title:'不能正常行驶免费拖车',tag:'保障',brief:'三包范围内故障导致不能正常行驶 · 修理者承担免费拖车',law:'第二十八条 三包有效期内，因产品质量问题不能正常行驶的，修理者应当提供免费拖车服务。',detail:['<b>适用条件：</b>因产品质量问题（非人为损坏）导致不能正常行驶。','<b>费用承担：</b>拖车费用由修理者承担。']},
+  {id:'refund',icon:'💰',title:'退车补偿公式',tag:'计算',brief:'退车退款 = 购车款 - 使用补偿费 · 补偿费 = 车价×里程/1000×系数',law:'第二十五条 使用补偿费用=车价款（元）×行驶里程（公里）/1,000（公里）×n（补偿系数）\nn由生产者确定并在三包凭证中明示，其数值范围为0.5%至0.8%。',detail:['<b>计算示例：</b>车价20万，行驶2000公里，系数0.6%，补偿费=200000×2000/1000×0.006=2400元。','<b>退车同时：</b>退还购车款、购置税、车船税、保险费等。']},
+  {id:'exclude',icon:'❌',title:'不适用三包情形',tag:'免责',brief:'自行改装 · 未按说明书保养 · 不可抗力 · 营运出租非家用',law:'第三十条 在家用汽车产品三包有效期内，有下列情形之一的，经营者对所涉及产品质量问题，可以不承担本规定所规定的三包责任：\n（一）消费者所购家用汽车产品已被书面告知存在瑕疵的；\n（二）家用汽车产品用于出租或者其他营运目的的；\n（三）使用说明书中明示不得改装、调整、拆卸，但消费者自行改装、调整、拆卸而造成损坏的；\n（四）因消费者未按照使用说明书要求正确使用、维护、修理产品而造成损坏的；\n（五）因不可抗力造成损坏的；\n（六）因消费者自身原因导致三包凭证丢失或者损毁的。',detail:['<b>改装免责：</b>自行改装明示不得操作的项目。','<b>保养义务：</b>必须按说明书定期保养。','<b>营运排除：</b>出租、网约车等不适用三包。']}
+];
+
+const XIAOMI_POLICIES=[
+  {id:'xm-warranty',icon:'🛡️',title:'标准保修期',tag:'通用',brief:'整车5年/10万公里 · 三电系统8年/16万公里 · 仅包修',detail:['<b>整车保修：</b>5年或10万公里（先到为准），仅<span class="highlight">包修</span>，不支持包退、包换。','<b>三电系统：</b>8年或16万公里（先到为准）。','<b>适用：</b>SU7、SU7 Ultra、YU7通用。']},
+  {id:'xm-sanbao',icon:'📋',title:'三包保修期（包修期）',tag:'通用',brief:'整车3年/6万公里 · 支持包修、包退、包换',detail:['<b>三包保修期：</b>3年或6万公里（先到为准）。','<b>服务范围：</b>支持<span class="highlight">包修、包退、包换</span>。']},
+  {id:'xm-valid',icon:'📅',title:'三包有效期',tag:'通用',brief:'2年/5万公里 · 不区分整车/三电 · 支持包修包退包换',detail:['<b>三包有效期：</b>2年或5万公里（先到为准）。','<b>不区分部件：</b>整车和三电系统均适用同一有效期。']},
+  {id:'xm-consumable',icon:'🔧',title:'常规易损件通用质保',tag:'通用',brief:'空调滤/制动片/轮胎等1年/2万公里 · 12V蓄电池4年/8万公里',detail:['<b>常规易损件：</b>空调滤清器、制动片、轮胎、智能钥匙电池、灯泡、保险丝、通用继电器：1年或2万公里，仅包修。','<b>12V蓄电池：</b>4年或8万公里，仅包修。']},
+  {id:'xm-su7',icon:'🏎️',title:'小米SU7',tag:'SU7',brief:'无额外特殊零部件质保条款',detail:['<b>说明：</b>适用通用统一政策中的所有标准保修、三包保修及易损件质保条款。']},
+  {id:'xm-ultra',icon:'⚡',title:'小米SU7 Ultra',tag:'SU7 Ultra',brief:'全车拉花3年/6万公里 · 纳入三包 · 支持包修包退包换',detail:['<b>特类零部件：</b>全车拉花，质保<span class="highlight">3年或6万公里</span>（先到为准）。','<b>纳入三包保修期：</b>支持<span class="highlight">包修、包退、包换</span>。']},
+  {id:'xm-yu7',icon:'🚙',title:'小米YU7',tag:'YU7',brief:'雨刮片6个月/1万公里 · HEPA压网/初滤滤芯1年/2万公里',detail:['<b>雨刮片：</b>6个月或1万公里（先到为准）。','<b>新增易损件：</b>HEPA压网、初滤滤芯组件，质保<span class="highlight">1年或2万公里</span>（先到为准）。']}
+];
+
+// ── 弹窗 ──
+function openModal(id){
+  const p=POLICIES.find(x=>x.id===id)||XIAOMI_POLICIES.find(x=>x.id===id);if(!p)return;
+  document.getElementById('mIcon').textContent=p.icon;
+  document.getElementById('mTitle').textContent=p.title;
+  let html='';
+  if(p.law)html+='<h4>📜 法规条款原文</h4><div class="law-box">'+p.law.replace(/\n/g,'<br>')+'</div>';
+  html+='<h4>📖 详细解读</h4><ul>'+p.detail.map(d=>'<li>'+d+'</li>').join('')+'</ul>';
+  document.getElementById('mBody').innerHTML=html;
+  const isNat=POLICIES.some(x=>x.id===id);
+  document.getElementById('mFoot').innerHTML=isNat?'<a href="https://www.gov.cn/zhengce/zhengceku/2022-01/01/content_5665835.htm" target="_blank">📖 查看完整法规原文（中国政府网）</a>':'<span style="font-size:13px;color:var(--t3)">以上为小米汽车官方三包保修政策</span>';
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+function switchTab(tab){document.querySelectorAll('.tab-btn').forEach((btn,i)=>btn.classList.toggle('active',i===(tab==='national'?0:1)));document.getElementById('tab-national').classList.toggle('active',tab==='national');document.getElementById('tab-xiaomi').classList.toggle('active',tab==='xiaomi')}
+
+function renderPolicyGrid(){
+  document.getElementById('policyGrid').innerHTML=POLICIES.map(p=>'<div class="p-card" onclick="openModal(\''+p.id+'\')"><span class="pc-tag">'+p.tag+'</span><div class="pc-icon">'+p.icon+'</div><div class="pc-title">'+p.title+'</div><div class="pc-body">'+p.brief+'</div></div>').join('');
+  document.getElementById('xiaomiGrid').innerHTML=XIAOMI_POLICIES.map(p=>'<div class="p-card" onclick="openModal(\''+p.id+'\')"><span class="pc-tag">'+p.tag+'</span><div class="pc-icon">'+p.icon+'</div><div class="pc-title">'+p.title+'</div><div class="pc-body">'+p.brief+'</div></div>').join('');
+}
+
+// ── 数据模块 ──
+const MODS={
+  claim:{name:'索赔单',cacheKey:'mod_claim_v3',fields:{supplier:['供应商名称(主因件)','供应商(主因件)','供应商','supplier','vendor','供货商','供方','厂商','主因件供应商','供应商名称'],fee:['零件二次索赔总费用（不含增值税）','二次索赔总费用','二次索赔费用','索赔费用','总费用','fee','amount','cost','索赔金额'],closed:['是否关闭','关闭','isclosed','closed','是否完结'],status:['状态','status','索赔状态'],model:['车型','vehicle_model','model','车系'],delivery:['是否创建提货单','提货单','delivery','创建提货单','提货单号'],claim:['索赔单号','claim','单号','编号'],region:['国家','地区','region','country'],faultType:['故障类型','故障','fault','问题类型','缺陷类型','故障模式','故障码描述','故障码'],settleNo:['结算单号','结算单','settle_no','settlement'],vin:['VIN','vin','车架号'],brand:['品牌','brand'],warehouse:['仓库','warehouse','库房'],partNo:['零件号(主因件)','零件号','part_no','partno'],partName:['零件名称(主因件)','零件名称','part_name'],claimType:['索赔类型','claim_type','claimtype'],receiveTime:['接收时间','接收日期','receive_time','receive_time'],closeReason:['关闭原因','close_reason','closereason'],alarm:['是否报警','报警','alarm'],pureLabor:['是否纯工时索赔','纯工时','pure_labor'],returnType:['返运类型','返运','return_type'],dutyRatio:['责任比例','责任','duty_ratio'],quantity:['数量','qty','quantity'],unit:['单位','unit']}},
+  settle:{name:'结算单',cacheKey:'mod_settle_v3',fields:{supplier:['供应商','供应商名称','supplier','vendor','供货商','供方','厂商'],fee:['结算金额','金额','总金额','费用','fee','amount','cost','结算费用','应付金额'],closed:['结算状态','是否结算','状态','status','isclosed','closed','是否完成'],status:['结算状态','状态','status','付款状态'],model:['车型','vehicle_model','model','车系'],claim:['结算单号','单号','编号','claim','settle_no'],region:['国家','地区','region','country'],faultType:['故障类型','故障','fault','问题类型','缺陷类型']}},
+  overseas:{name:'海外质保金',cacheKey:'mod_overseas_v3',fields:{supplier:['供应商','供应商名称','supplier','vendor','供货商','供方','厂商'],fee:['金额','质保金','总金额','费用','fee','amount','cost','质保金额','索赔金额'],closed:['状态','是否关闭','关闭','status','isclosed','closed','是否完成'],status:['状态','status','质保状态','处理状态'],model:['车型','vehicle_model','model','车系'],claim:['单号','编号','质保单号','claim'],region:['国家','地区','region','country','国家/地区','市场'],faultType:['故障类型','故障','fault','问题类型','缺陷类型']}}
+};
+
+const MOD_DATA={};
+const fmtN=v=>v.toLocaleString('zh-CN');
+const fmtM=v=>'¥'+v.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=(a,b)=>b?((a/b)*100).toFixed(1)+'%':'0%';
+const isClosed=v=>{const t=String(v||'').trim().toLowerCase();return t==='是'||t==='1'||t==='true'||t==='yes'||t.includes('关闭')||t.includes('closed')||t.includes('完成')||t.includes('done')||t.includes('已结')||t.includes('结算')};
+const isYes=v=>{const t=String(v||'').trim().toLowerCase();return t==='是'||t==='1'||t==='true'||t==='yes'||t.includes('创建')||t.includes('已')};
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+
+// Chart.js 实例追踪
+const chartInstances={};
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
+
+let currentMod='warranty';
+
+function switchMod(id){
+  currentMod=id;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.mod===id));
+  document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod-'+id));
+  const md=MOD_DATA[id];
+  const dash=document.getElementById('dash-'+id);
+  if(!dash)return;
+  if(md&&md.data&&md.data.length){
+    dash.classList.remove('hidden');
+    const dp=document.getElementById('detail-'+id);
+    if(dp){dp.style.display='none';dp.classList.remove('active')}
+    setTimeout(()=>{
+      try{
+        showDash(id);
+        // 验证是否渲染成功
+        if(!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
+          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板渲染失败：HTML未生成</div>';
+        }
+      }catch(e){
+        console.error('渲染失败:',e);
+        dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'</div>';
+      }
+    },300);
+  }
+}
+
+function showDetail(modId,page){
+  document.getElementById('dash-'+modId).classList.add('hidden');
+  const dp=document.getElementById('detail-'+modId);
+  dp.style.display='flex';dp.classList.add('active');
+  renderDetail(modId,page);
+}
+
+function backToDash(modId){
+  document.getElementById('dash-'+modId).classList.remove('hidden');
+  const dp=document.getElementById('detail-'+modId);
+  dp.style.display='none';dp.classList.remove('active');
+  // 清理 detail 内的 chart
+  Object.keys(chartInstances).filter(k=>k.startsWith('dtl-')).forEach(destroyChart);
+}
+
+function detectField(heads,targets){const norm=heads.map(h=>h.replace(/[\s\(\)（）_\-]/g,'').toLowerCase());for(const t of targets){const tc=t.replace(/[\s\(\)（）_\-]/g,'').toLowerCase();const i=norm.findIndex(h=>h===tc||h.includes(tc));if(i!==-1)return heads[i]}return''}
+function detectAll(id,heads){const cfg=MODS[id].fields;const fm={};for(const[k,targets]of Object.entries(cfg))fm[k]=detectField(heads,targets);if(!fm.supplier){const i=heads.findIndex(h=>h.includes('供应'));if(i!==-1)fm.supplier=heads[i]}if(!fm.fee){const i=heads.findIndex(h=>h.includes('费用')||h.includes('金额'));if(i!==-1)fm.fee=heads[i]}if(!fm.region){const i=heads.findIndex(h=>h.includes('国家')||h.includes('地区')||h.includes('市场'));if(i!==-1)fm.region=heads[i]}if(!fm.faultType){const i=heads.findIndex(h=>h.includes('故障')||h.includes('问题')||h.includes('缺陷'));if(i!==-1)fm.faultType=heads[i]}return fm}
+
+// ── IndexedDB 缓存（支持大数据量） ──
+const DB_NAME='ClaimDashDB';
+const DB_VER=2;
+let db=null;
+
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    if(db)return resolve(db);
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const db2=e.target.result;
+      if(!db2.objectStoreNames.contains('modules'))db2.createObjectStore('modules',{keyPath:'id'});
+    };
+    req.onsuccess=e=>{db=e.target.result;resolve(db)};
+    req.onerror=e=>{console.error('IndexedDB 打开失败:',e);reject(e.target.error)};
+  });
+}
+
+async function saveMod(id){
+  const md=MOD_DATA[id];if(!md||!md.data||!md.data.length)return;
+  const payload=JSON.stringify({d:md.data,h:md.heads,t:Date.now()});
+  // 优先 IndexedDB
+  try{
+    const d=await openDB();
+    const tx=d.transaction('modules','readwrite');
+    tx.objectStore('modules').put({id,data:md.data,heads:md.heads,ts:Date.now()});
+    tx.oncomplete=()=>console.log('[DB] 保存成功:',id,md.data.length+'条');
+  }catch(e){
+    // 回退 localStorage
+    try{localStorage.setItem('cd_'+id,payload);console.log('[LS] 回退保存:',id)}catch(e2){console.error('保存失败:',e2)}
+  }
+}
+
+async function loadMod(id){
+  // 先试 IndexedDB
+  try{
+    const d=await openDB();
+    const result=await new Promise((resolve,reject)=>{
+      const tx=d.transaction('modules','readonly');
+      const req=tx.objectStore('modules').get(id);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error);
+    });
+    if(result&&Array.isArray(result.data)&&result.data.length>0){
+      MOD_DATA[id]={data:result.data,heads:result.heads,fm:{}};
+      console.log('[DB] 加载成功:',id,result.data.length+'条');
+      return true;
+    }
+  }catch(e){console.warn('[DB] 加载失败，尝试 localStorage:',e)}
+  // 回退 localStorage
+  try{
+    const raw=localStorage.getItem('cd_'+id);
+    if(raw){const o=JSON.parse(raw);if(o&&Array.isArray(o.d)&&o.d.length>0){
+      MOD_DATA[id]={data:o.d,heads:o.h,fm:{}};
+      console.log('[LS] 回退加载成功:',id,o.d.length+'条');
+      // 迁移到 IndexedDB
+      saveMod(id);
+      return true;
+    }}
+  }catch(e){}
+  return false;
+}
+
+async function clearModFromDB(id){
+  try{const d=await openDB();const tx=d.transaction('modules','readwrite');tx.objectStore('modules').delete(id)}catch(e){}
+  try{localStorage.removeItem('cd_'+id)}catch(e){}
+}
+function clearMod(id){
+  clearModFromDB(id);
+  MOD_DATA[id]={data:[],heads:[],fm:{}};
+  document.getElementById('cache-'+id).classList.add('hidden');
+  document.getElementById('dash-'+id).classList.add('hidden');
+  document.getElementById('dash-'+id).innerHTML='';
+  const dp=document.getElementById('detail-'+id);
+  if(dp){dp.style.display='none';dp.classList.remove('active');dp.innerHTML=''}
+  updateInfo(id);updateBadge(id);
+  if(id==='claim'){
+    const st=document.getElementById('claim-status');if(st)st.textContent='请上传数据开始分析';
+    const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=true;
+    const dbg=document.getElementById('cache-debug');if(dbg)dbg.innerHTML='📭 暂无缓存数据';
+  }
+}
+
+function setupUpload(id){
+  const fi=document.getElementById('fi-'+id);
+  if(!fi){console.error('[上传] 元素未找到:',id);return}
+  fi.addEventListener('change',function(e){
+    console.log('[上传] change事件触发, files:',this.files?this.files.length:0);
+    if(this.files&&this.files.length){
+      const file=this.files[0];
+      console.log('[上传] 选择文件:',file.name,'大小:',file.size,'类型:',file.type);
+      handleFile(id,file);
+      this.value='';
+    }
+  });
+  console.log('[上传] 绑定成功:',id);
+}
+function handleFile(id,f){
+  const ext=f.name.split('.').pop().toLowerCase();
+  console.log('[解析] 文件扩展名:',ext);
+  if(ext==='csv'){
+    const r=new FileReader();
+    r.onload=e=>{console.log('[解析] CSV读取完成, 长度:',e.target.result.length);parseCSV(id,e.target.result)};
+    r.onerror=e=>console.error('[解析] CSV读取失败:',e);
+    r.readAsText(f);
+  }else if(ext==='xlsx'||ext==='xls'){
+    const r=new FileReader();
+    r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});console.log('[解析] XLSX解析完成, 行数:',rows.length);loadData(id,rows)}catch(err){console.error('[解析] XLSX失败:',err);alert('解析失败: '+err.message)}};
+    r.onerror=e=>console.error('[解析] XLSX读取失败:',e);
+    r.readAsArrayBuffer(f);
+  }else{console.warn('[解析] 不支持的格式:',ext);alert('请上传 CSV/XLSX/XLS 文件')}
+}
+function parseCSV(id,text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  console.log('[解析] CSV行数:',lines.length);
+  if(lines.length<2)return alert('CSV 内容不足');
+  const hd=splitLine(lines[0]);
+  console.log('[解析] CSV表头:',hd);
+  const rows=lines.slice(1).map(line=>{const v=splitLine(line);const o={};hd.forEach((h,i)=>o[h]=v[i]??'');return o});
+  console.log('[解析] CSV数据行:',rows.length);
+  loadData(id,rows);
+}
+function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}
+
+async function loadData(id,rows){
+  if(!rows||!rows.length)return alert('无数据');
+  const dash=document.getElementById('dash-'+id);
+  try{
+    const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
+    MOD_DATA[id]={data:rows,heads:heads,fm:fm};
+    // 先显示看板容器和加载提示
+    if(dash){dash.innerHTML='<div style="padding:40px;text-align:center;color:var(--t2)">⏳ 数据加载中...</div>';dash.classList.remove('hidden')}
+    updateInfo(id);updateBadge(id);
+    await saveMod(id);
+    if(id==='claim'){
+      const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+      const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
+      const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
+    }
+    // 直接渲染，不用 switchMod
+    if(dash)dash.innerHTML='';
+    currentMod=id;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.mod===id));
+    document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod-'+id));
+    const dp=document.getElementById('detail-'+id);
+    if(dp){dp.style.display='none';dp.classList.remove('active')}
+    setTimeout(()=>{
+      try{
+        showDash(id);
+        if(dash&&!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
+          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板HTML未生成，请检查控制台</div>';
+        }
+      }catch(e){
+        console.error('渲染失败:',e);
+        if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'<br><br>请按F12打开控制台查看详细错误</div>';
+      }
+    },400);
+  }catch(e){
+    console.error('loadData 失败:',e);
+    if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 数据加载失败: '+esc(e.message)+'</div>';
+  }
+}
+
+function updateInfo(id){const md=MOD_DATA[id];if(!md||!md.data.length){['ui-t-','ui-s-','ui-c-','ui-o-','ui-a-','ui-r-'].forEach(p=>{const e=document.getElementById(p+id);if(e)e.textContent='0'});return}
+const{data,fm}=md;const T=data.length;const bySup={};if(fm.supplier)data.forEach(r=>{const k=String(r[fm.supplier]||'(空)');(bySup[k]??=[]).push(r)});const supN=Object.keys(bySup).filter(k=>k!=='(空)').length;let cN=0,oN=0;const cf=fm.closed||fm.status;if(cf)data.forEach(r=>isClosed(r[cf])?cN++:oN++);const set=(p,v)=>{const e=document.getElementById(p+id);if(e)e.textContent=v};set('ui-t-',T);set('ui-s-',supN);set('ui-c-',cf?cN:'—');set('ui-o-',cf?oN:'—');if(fm.fee){let t=0;data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));if(!isNaN(n))t+=n});set('ui-a-',fmtM(t))}if(fm.region){const rg=new Set(data.map(r=>String(r[fm.region]||'')).filter(v=>v&&v!=='(空)'));set('ui-r-',rg.size)}}
+
+function updateBadge(id){const md=MOD_DATA[id];const b=document.getElementById('badge-'+id);if(b)b.textContent=md&&md.data.length?md.data.length+'条':'—'}
+
+// ── 看板渲染 ──
+function showDash(id){
+  const md=MOD_DATA[id];if(!md||!md.data.length)return;
+  const{data,fm}=md;const T=data.length;const cfg=MODS[id];
+
+  // 分组
+  const bySup={};if(fm.supplier)data.forEach(r=>{const k=String(r[fm.supplier]||'(空)');(bySup[k]??=[]).push(r)});
+  const supKeys=Object.keys(bySup).sort((a,b)=>bySup[b].length-bySup[a].length);
+  const emptyN=bySup['(空)']?bySup['(空)'].length:0;
+  const supF={};supKeys.filter(k=>k!=='(空)').forEach(k=>{supF[k]=bySup[k]});
+  const supFK=Object.keys(supF).sort((a,b)=>supF[b].length-supF[a].length);
+
+  const cf=fm.closed||fm.status;let cN=0,oN=0;
+  if(fm.closed)data.forEach(r=>{const v=String(r[fm.closed]||'').trim().toLowerCase();if(v==='是'||v==='1'||v==='true'||v.includes('关闭')||v.includes('完成'))cN++;else oN++});
+
+  // 二次索赔总费用（是否关闭=否 的金额）
+  let totalFee=-1;let unclosedFee=0;const feeBySup={};
+  if(fm.fee){totalFee=0;data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;
+    const isUnclosed=fm.closed&&(String(r[fm.closed]||'').trim().toLowerCase()==='否'||String(r[fm.closed]||'').trim()==='0');
+    if(isUnclosed)unclosedFee+=v;
+    if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}
+  })}
+
+  const byModel={};let modelKeys=[];
+  if(fm.model){data.forEach(r=>{const k=String(r[fm.model]||'(空)');(byModel[k]??=[]).push(r)});modelKeys=Object.keys(byModel).sort((a,b)=>byModel[b].length-byModel[a].length)}
+
+  const byFault={};let faultKeys=[];
+  if(fm.faultType){data.forEach(r=>{const k=String(r[fm.faultType]||'(空)');if(k!=='(空)')(byFault[k]??=[]).push(r)});faultKeys=Object.keys(byFault).sort((a,b)=>byFault[b].length-byFault[a].length)}
+
+  // 无法下发单据（状态为"匹配未完成"或"匹配完成"）
+  let noDeliveryN=0;const noDeliveryRows=[];const noDeliveryByStatus={};
+  if(fm.status){data.forEach(r=>{const v=String(r[fm.status]||'').trim();if(v.includes('匹配未完成')||v.includes('匹配完成')){noDeliveryN++;noDeliveryRows.push(r);noDeliveryByStatus[v]=(noDeliveryByStatus[v]||0)+1}})}
+
+  // 月度趋势
+  let monthData={};
+  data.forEach(r=>{
+    let dateStr='';
+    for(const h of md.heads){const v=String(r[h]||'');if(/\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}/.test(v)){dateStr=v;break}}
+    if(!dateStr)return;
+    const m=dateStr.match(/(\d{4})[\-\/\.](\d{1,2})/);
+    if(m){const key=m[1]+'-'+m[2].padStart(2,'0');monthData[key]=(monthData[key]||0)+1}
+  });
+  const monthKeys=Object.keys(monthData).sort();
+
+  const dash=document.getElementById('dash-'+id);
+
+  // ── 索赔单专用：四大模块 ──
+  if(id==='claim'){
+    let html='<div class="four-grid">';
+    html+='<div class="four-card" onclick="showDetail(\'claim\',\'total\')"><div class="fc-icon">📋</div><div class="fc-label">索赔单总量</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">涉及 '+supKeys.length+' 家供应商'+(cf?' · 已关闭 '+cN+' · 未关闭 '+oN:'')+'</div><div class="fc-arrow">→</div></div>';
+    html+='<div class="four-card" onclick="showDetail(\'claim\',\'supplier\')"><div class="fc-icon">🏢</div><div class="fc-label">供应商数量</div><div class="fc-val">'+fmtN(supKeys.length)+'</div><div class="fc-detail">'+(emptyN?'<span style="color:#f87171">'+emptyN+' 条未匹配</span> · ':'')+'有效供应商 '+supFK.length+' 家</div><div class="fc-arrow">→</div></div>';
+    html+='<div class="four-card" onclick="showDetail(\'claim\',\'fee\')"><div class="fc-icon">💰</div><div class="fc-label">二次索赔总费用</div><div class="fc-val">'+(totalFee>=0?fmtM(unclosedFee):'—')+'</div><div class="fc-detail">'+(totalFee>=0?'未关闭(是否关闭=否): '+fmtM(unclosedFee)+' · 全部: '+fmtM(totalFee):'未检测到费用字段')+'</div><div class="fc-arrow">→</div></div>';
+    const ndDetail=Object.keys(noDeliveryByStatus).map(k=>k+': '+noDeliveryByStatus[k]+'条').join(' · ');
+    html+='<div class="four-card" onclick="showDetail(\'claim\',\'nodelivery\')"><div class="fc-icon">⚠️</div><div class="fc-label">无法下发单据</div><div class="fc-val" style="color:#f87171">'+fmtN(noDeliveryN)+'</div><div class="fc-detail">'+(ndDetail||'暂无匹配数据')+'</div><div class="fc-arrow">→</div></div>';
+    html+='</div>';
+
+    // 图表区域
+    html+='<div class="chart-grid">';
+    html+='<div class="chart-card" onclick="showDetail(\'claim\',\'supplier\')"><h3>🏆 TOP10 供应商</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
+    if(faultKeys.length)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'fault\')"><h3>🔍 故障类型分布</h3><div class="cs">点击查看故障明细 →</div><canvas id="ch-'+id+'-fault"></canvas></div>';
+    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'month\')"><h3>📈 月度索赔趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
+    if(modelKeys.length)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'model\')"><h3>🚗 车型分布</h3><div class="cs">'+modelKeys.slice(0,8).length+' 种车型</div><canvas id="ch-'+id+'-model"></canvas></div>';
+    html+='</div>';
+
+    // 表格
+    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
+    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    dash.innerHTML=html;dash.classList.remove('hidden');
+  }
+
+  // ── 其他模块：通用看板 ──
+  else{
+    let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">';
+    html+=kpi('总记录',fmtN(T),'涉及 '+supKeys.length+' 家供应商','');
+    if(cf)html+=kpi('已关闭/完成',fmtN(cN),'占比 '+pct(cN,T),'');
+    if(cf)html+=kpi('处理中',fmtN(oN),'占比 '+pct(oN,T),'');
+    if(totalFee>=0)html+=kpi('总金额',fmtM(totalFee),'平均 '+fmtM(totalFee/T)+'/单','');
+    html+='</div>';
+    if(emptyN)html+='<div class="warn-box" onclick="showEmptyMod(\''+id+'\')"><span>⚠️</span><span class="wn">'+emptyN+'</span><span>条记录未匹配到供应商（点击查看）</span></div>';
+    html+='<div class="chart-grid">';
+    html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'supplier\')"><h3>🏆 TOP10 供应商</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
+    if(faultKeys.length)html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'fault\')"><h3>🔍 故障类型分布</h3><div class="cs">点击查看故障明细 →</div><canvas id="ch-'+id+'-fault"></canvas></div>';
+    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'month\')"><h3>📈 月度趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
+    if(modelKeys.length)html+='<div class="chart-card"><h3>🚗 车型分布</h3><div class="cs">'+modelKeys.slice(0,8).length+' 种车型</div><canvas id="ch-'+id+'-model"></canvas></div>';
+    html+='</div>';
+    const tL=Math.min(supFK.length,15);
+    html+='<div class="chart-card"><h3>🔎 供应商明细（点击展开）</h3><div class="cs">展示前 '+tL+' 家</div><ul class="clist" id="sl-'+id+'"></ul></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
+    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    dash.innerHTML=html;dash.classList.remove('hidden');
+  }
+
+  function drawCharts(attempt){
+    attempt=attempt||0;
+    try{
+      const cv1=document.getElementById('ch-'+id+'-sup');
+      if(!cv1||!cv1.parentElement||cv1.parentElement.clientWidth<=0){
+        if(attempt<20){setTimeout(()=>drawCharts(attempt+1),100);return}
+        console.warn('canvas 未就绪，跳过图表绘制');return;
+      }
+      const t10=supFK.slice(0,10);
+      destroyChart('ch-'+id+'-sup');
+      chartInstances['ch-'+id+'-sup']=new Chart(cv1,{type:'bar',data:{labels:t10.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'索赔数量',data:t10.map(k=>supF[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+
+      if(faultKeys.length){
+        const cv2=document.getElementById('ch-'+id+'-fault');
+        if(cv2&&cv2.parentElement&&cv2.parentElement.clientWidth>0){
+          const fTop=faultKeys.slice(0,8);
+          destroyChart('ch-'+id+'-fault');
+          chartInstances['ch-'+id+'-fault']=new Chart(cv2,{type:'doughnut',data:{labels:fTop.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:fTop.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
+        }
+      }
+
+      if(monthKeys.length>1){
+        const cv3=document.getElementById('ch-'+id+'-month');
+        if(cv3&&cv3.parentElement&&cv3.parentElement.clientWidth>0){
+          destroyChart('ch-'+id+'-month');
+          chartInstances['ch-'+id+'-month']=new Chart(cv3,{type:'line',data:{labels:monthKeys,datasets:[{label:'索赔数量',data:monthKeys.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+        }
+      }
+
+      if(modelKeys.length){
+        const cv4=document.getElementById('ch-'+id+'-model');
+        if(cv4&&cv4.parentElement&&cv4.parentElement.clientWidth>0){
+          const mTop=modelKeys.slice(0,8);
+          destroyChart('ch-'+id+'-model');
+          chartInstances['ch-'+id+'-model']=new Chart(cv4,{type:'bar',data:{labels:mTop.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'数量',data:mTop.map(k=>byModel[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:CHART_COLORS.slice(0,8),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+        }
+      }
+
+      renderList(id,supFK.slice(0,tL),supFK.slice(0,tL).map(k=>supF[k].length),supF);
+      buildTable(id,data,false);
+      const fi=document.getElementById('fi-'+id);if(fi)fi.value='';
+    }catch(e){console.error('图表渲染失败:',e)}
+  }
+  setTimeout(()=>drawCharts(0),200);
+}
+
+function kpi(label,val,detail,onclick){return'<div class="kpi"'+(onclick?' onclick="'+onclick+'"':'')+'><div class="kl">'+label+'</div><div class="kv">'+val+'</div><div class="kd">'+detail+'</div></div>'}
+
+// ── 详情页 ──
+function renderDetail(modId,page){
+  const md=MOD_DATA[modId];if(!md)return;
+  const{data,fm}=md;const dp=document.getElementById('detail-'+modId);
+  const T=data.length;
+
+  // ── 索赔单总量详情 ──
+  if(page==='total'){
+    const byStatus={};const cf=fm.closed||fm.status;
+    if(cf)data.forEach(r=>{const k=String(r[cf]||'(空)');(byStatus[k]??=[]).push(r)});
+    const sKeys=Object.keys(byStatus).sort((a,b)=>byStatus[b].length-byStatus[a].length);
+    let html='<div class="detail-hd"><h2>📋 索赔单总量详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>状态分布</h3><canvas id="dtl-total-pie"></canvas></div><div class="chart-card"><h3>状态排名</h3><canvas id="dtl-total-bar"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>状态明细</h3><span>'+T+' 条</span></div><div class="tw"><table><thead><tr><th>#</th><th>状态</th><th>数量</th><th>占比</th></tr></thead><tbody>';
+    sKeys.forEach((k,i)=>html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtN(byStatus[k].length)+'</td><td>'+pct(byStatus[k].length,T)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      const top=sKeys.slice(0,10);
+      destroyChart('dtl-total-pie');chartInstances['dtl-total-pie']=new Chart(document.getElementById('dtl-total-pie'),{type:'doughnut',data:{labels:top,datasets:[{data:top.map(k=>byStatus[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+      destroyChart('dtl-total-bar');chartInstances['dtl-total-bar']=new Chart(document.getElementById('dtl-total-bar'),{type:'bar',data:{labels:top,datasets:[{label:'数量',data:top.map(k=>byStatus[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
+
+  // ── 二次索赔费用详情 ──
+  else if(page==='fee'){
+    const feeBySup={};const feeByModel={};const unclosedFeeBySup={};
+    let totalF=0,unclosedF=0;
+    if(fm.fee)data.forEach(r=>{
+      const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalF+=v;
+      const isUnclosed=fm.closed&&(String(r[fm.closed]||'').trim().toLowerCase()==='否'||String(r[fm.closed]||'').trim()==='0');
+      if(isUnclosed)unclosedF+=v;
+      if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v;if(isUnclosed)unclosedFeeBySup[k]=(unclosedFeeBySup[k]||0)+v}
+      if(fm.model){const k=String(r[fm.model]||'(空)');feeByModel[k]=(feeByModel[k]||0)+v}
+    });
+    const sorted=Object.keys(feeBySup).filter(k=>k!=='(空)').sort((a,b)=>feeBySup[b]-feeBySup[a]);
+    const mSorted=Object.keys(feeByModel).filter(k=>k!=='(空)').sort((a,b)=>feeByModel[b]-feeByModel[a]);
+    let html='<div class="detail-hd"><h2>💰 二次索赔费用详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">';
+    html+='<div class="kpi"><div class="kl">全部费用</div><div class="kv">'+fmtM(totalF)+'</div></div>';
+    html+='<div class="kpi"><div class="kl">未关闭费用（是否关闭=否）</div><div class="kv" style="color:#f87171">'+fmtM(unclosedF)+'</div></div>';
+    html+='<div class="kpi"><div class="kl">已关闭费用</div><div class="kv" style="color:#34d399">'+fmtM(totalF-unclosedF)+'</div></div>';
+    html+='</div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>供应商费用排名</h3><canvas id="dtl-fee-sup"></canvas></div><div class="chart-card"><h3>车型费用排名</h3><canvas id="dtl-fee-model"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>供应商费用清单</h3><span>'+sorted.length+' 家</span></div><div class="tw"><table><thead><tr><th>#</th><th>供应商</th><th>总费用</th><th>未关闭费用</th><th>占比</th></tr></thead><tbody>';
+    sorted.forEach((k,i)=>html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtM(feeBySup[k])+'</td><td style="color:#f87171">'+fmtM(unclosedFeeBySup[k]||0)+'</td><td>'+pct(feeBySup[k],totalF)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      const t20=sorted.slice(0,20);
+      destroyChart('dtl-fee-sup');chartInstances['dtl-fee-sup']=new Chart(document.getElementById('dtl-fee-sup'),{type:'bar',data:{labels:t20.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{label:'总费用',data:t20.map(k=>feeBySup[k]),backgroundColor:'rgba(249,115,22,.6)',borderColor:'#f97316',borderWidth:1,borderRadius:6},{label:'未关闭费用',data:t20.map(k=>unclosedFeeBySup[k]||0),backgroundColor:'rgba(239,68,68,.6)',borderColor:'#ef4444',borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{labels:{padding:12}}},scales:{x:{beginAtZero:true,stacked:false,grid:{color:'rgba(42,47,61,.5)'}},y:{grid:{display:false}}}}});
+      const m20=mSorted.slice(0,20);
+      destroyChart('dtl-fee-model');chartInstances['dtl-fee-model']=new Chart(document.getElementById('dtl-fee-model'),{type:'bar',data:{labels:m20.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'费用',data:m20.map(k=>feeByModel[k]),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
+
+  // ── 无法下发单据详情 ──
+  else if(page==='nodelivery'){
+    const statusField=fm.status;
+    const noRows=data.filter(r=>{if(!statusField)return false;const v=String(r[statusField]||'').trim();return v.includes('匹配未完成')||v.includes('匹配完成')});
+    const bySup2={};if(fm.supplier)noRows.forEach(r=>{const k=String(r[fm.supplier]||'(空)');(bySup2[k]??=[]).push(r)});
+    const sK=Object.keys(bySup2).filter(k=>k!=='(空)').sort((a,b)=>bySup2[b].length-bySup2[a].length);
+    const byStatus2={};noRows.forEach(r=>{const k=String(r[statusField]||'(空)');(byStatus2[k]??=[]).push(r)});
+    const stK=Object.keys(byStatus2).sort((a,b)=>byStatus2[b].length-byStatus2[a].length);
+    let html='<div class="detail-hd"><h2>⚠️ 无法下发单据详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="kpi-grid" style="display:grid;grid-template-columns:repeat('+Math.min(stK.length,4)+',1fr);gap:14px;margin-bottom:18px">';
+    stK.forEach(k=>html+='<div class="kpi"><div class="kl">'+esc(k)+'</div><div class="kv" style="color:#f87171">'+fmtN(byStatus2[k].length)+'</div><div class="kd">'+pct(byStatus2[k].length,noRows.length)+'</div></div>');
+    html+='</div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>状态分布</h3><canvas id="dtl-nd-pie"></canvas></div><div class="chart-card"><h3>供应商排名</h3><canvas id="dtl-nd-sup"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>无法下发单据明细</h3><span>'+noRows.length+' 条</span></div><div class="tw"><table><thead><tr><th>#</th>';
+    const vis=['索赔单号','供应商名称(主因件)','供应商(主因件)','状态','车型','VIN','零件名称(主因件)','零件二次索赔总费用（不含增值税）'].filter(h=>md.heads.includes(h));
+    if(!vis.length)vis.push(...md.heads.slice(0,8));
+    vis.forEach(v=>html+='<th>'+esc(v)+'</th>');
+    html+='</tr></thead><tbody>';
+    noRows.slice(0,200).forEach((r,i)=>{html+='<tr><td>'+(i+1)+'</td>';vis.forEach(v=>html+='<td>'+esc(String(r[v]||''))+'</td>');html+='</tr>'});
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      destroyChart('dtl-nd-pie');chartInstances['dtl-nd-pie']=new Chart(document.getElementById('dtl-nd-pie'),{type:'doughnut',data:{labels:stK.map(k=>k.length>14?k.slice(0,14)+'…':k),datasets:[{data:stK.map(k=>byStatus2[k].length),backgroundColor:['rgba(245,158,11,.7)','rgba(239,68,68,.7)','rgba(139,92,246,.7)','rgba(59,130,246,.7)'],borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+      const t15=sK.slice(0,15);
+      destroyChart('dtl-nd-sup');chartInstances['dtl-nd-sup']=new Chart(document.getElementById('dtl-nd-sup'),{type:'bar',data:{labels:t15.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{label:'未下发数量',data:t15.map(k=>bySup2[k].length),backgroundColor:'rgba(245,158,11,.6)',borderColor:'#f59e0b',borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}},y:{grid:{display:false}}}}});
+    },100);
+  }
+
+  // ── 车型详情 ──
+  else if(page==='model'){
+    const byModel2={};if(fm.model)data.forEach(r=>{const k=String(r[fm.model]||'(空)');if(k!=='(空)')(byModel2[k]??=[]).push(r)});
+    const mK=Object.keys(byModel2).sort((a,b)=>byModel2[b].length-byModel2[a].length);
+    let html='<div class="detail-hd"><h2>🚗 车型分布详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>车型分布</h3><canvas id="dtl-model-pie"></canvas></div><div class="chart-card"><h3>车型排名</h3><canvas id="dtl-model-bar"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>车型明细</h3><span>'+mK.length+' 种</span></div><div class="tw"><table><thead><tr><th>#</th><th>车型</th><th>数量</th><th>占比</th></tr></thead><tbody>';
+    mK.forEach((k,i)=>html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtN(byModel2[k].length)+'</td><td>'+pct(byModel2[k].length,T)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      const top=mK.slice(0,10);
+      destroyChart('dtl-model-pie');chartInstances['dtl-model-pie']=new Chart(document.getElementById('dtl-model-pie'),{type:'doughnut',data:{labels:top,datasets:[{data:top.map(k=>byModel2[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+      destroyChart('dtl-model-bar');chartInstances['dtl-model-bar']=new Chart(document.getElementById('dtl-model-bar'),{type:'bar',data:{labels:top,datasets:[{label:'数量',data:top.map(k=>byModel2[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
+
+  else if(page==='supplier'){
+    const bySup={};if(fm.supplier)data.forEach(r=>{const k=String(r[fm.supplier]||'(空)');(bySup[k]??=[]).push(r)});
+    const supFK=Object.keys(bySup).filter(k=>k!=='(空)').sort((a,b)=>bySup[b].length-bySup[a].length);
+    let feeBySup={};let totalFee=0;
+    if(fm.fee){data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}})}
+
+    let html='<div class="detail-hd"><h2>🏆 供应商详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>供应商数量排名</h3><canvas id="dtl-sup-bar"></canvas></div>';
+    if(fm.fee)html+='<div class="chart-card"><h3>供应商费用排名</h3><canvas id="dtl-sup-fee"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>供应商排名清单</h3><span>'+supFK.length+' 家</span></div><div class="tw"><table><thead><tr><th>#</th><th>供应商</th><th>索赔数量</th>'+(fm.fee?'<th>索赔金额</th>':'')+'<th>占比</th></tr></thead><tbody>';
+    const tT=data.length;
+    supFK.forEach((k,i)=>{
+      const cnt=bySup[k].length;
+      html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtN(cnt)+'</td>'+(fm.fee?'<td>'+fmtM(feeBySup[k]||0)+'</td>':'')+'<td>'+pct(cnt,tT)+'</td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+
+    setTimeout(()=>{
+      const top20=supFK.slice(0,20);
+      destroyChart('dtl-sup-bar');
+      chartInstances['dtl-sup-bar']=new Chart(document.getElementById('dtl-sup-bar'),{type:'bar',data:{labels:top20.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{label:'索赔数量',data:top20.map(k=>bySup[k].length),backgroundColor:CHART_BG,borderColor:CHART_COLORS,borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}},y:{grid:{display:false}}}}});
+      if(fm.fee){
+        const sorted=supFK.slice().sort((a,b)=>(feeBySup[b]||0)-(feeBySup[a]||0)).slice(0,20);
+        destroyChart('dtl-sup-fee');
+        chartInstances['dtl-sup-fee']=new Chart(document.getElementById('dtl-sup-fee'),{type:'bar',data:{labels:sorted.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{label:'索赔金额',data:sorted.map(k=>feeBySup[k]||0),backgroundColor:CHART_BG,borderColor:CHART_COLORS,borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}},y:{grid:{display:false}}}}});
+      }
+    },100);
+  }
+
+  else if(page==='fault'){
+    const byFault={};if(fm.faultType)data.forEach(r=>{const k=String(r[fm.faultType]||'');if(k&&k!=='(空)')(byFault[k]??=[]).push(r)});
+    const fK=Object.keys(byFault).sort((a,b)=>byFault[b].length-byFault[a].length);
+    let html='<div class="detail-hd"><h2>🔍 故障类型详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>故障类型分布</h3><canvas id="dtl-fault-pie"></canvas></div><div class="chart-card"><h3>故障类型排名</h3><canvas id="dtl-fault-bar"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>故障明细</h3><span>'+fK.length+' 种</span></div><div class="tw"><table><thead><tr><th>#</th><th>故障类型</th><th>数量</th><th>占比</th></tr></thead><tbody>';
+    const tT=fK.reduce((s,k)=>s+byFault[k].length,0);
+    fK.forEach((k,i)=>html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtN(byFault[k].length)+'</td><td>'+pct(byFault[k].length,tT)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      const top=fK.slice(0,10);
+      destroyChart('dtl-fault-pie');
+      chartInstances['dtl-fault-pie']=new Chart(document.getElementById('dtl-fault-pie'),{type:'doughnut',data:{labels:top.map(k=>k.length>14?k.slice(0,14)+'…':k),datasets:[{data:top.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+      destroyChart('dtl-fault-bar');
+      chartInstances['dtl-fault-bar']=new Chart(document.getElementById('dtl-fault-bar'),{type:'bar',data:{labels:top.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{label:'数量',data:top.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
+
+  else if(page==='month'){
+    let monthData={};
+    data.forEach(r=>{let ds='';for(const h of md.heads){const v=String(r[h]||'');if(/\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}/.test(v)){ds=v;break}}if(!ds)return;const m=ds.match(/(\d{4})[\-\/\.](\d{1,2})/);if(m){const key=m[1]+'-'+m[2].padStart(2,'0');monthData[key]=(monthData[key]||0)+1}});
+    const mK=Object.keys(monthData).sort();
+    let html='<div class="detail-hd"><h2>📈 月度索赔趋势</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-card"><h3>月度趋势</h3><canvas id="dtl-month-line"></canvas></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>月度数据</h3><span>'+mK.length+' 个月</span></div><div class="tw"><table><thead><tr><th>月份</th><th>索赔数量</th><th>占比</th></tr></thead><tbody>';
+    const tT=mK.reduce((s,k)=>s+monthData[k],0);
+    mK.forEach(k=>html+='<tr><td>'+k+'</td><td>'+fmtN(monthData[k])+'</td><td>'+pct(monthData[k],tT)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      destroyChart('dtl-month-line');
+      chartInstances['dtl-month-line']=new Chart(document.getElementById('dtl-month-line'),{type:'line',data:{labels:mK,datasets:[{label:'索赔数量',data:mK.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.15)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:6,pointHoverRadius:10,borderWidth:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
+}
+
+function renderList(id,labels,vals,groups){
+  const el=document.getElementById('sl-'+id);if(!el)return;
+  const mx=Math.max(...vals,1)||1,fm=MOD_DATA[id].fm;
+  el.innerHTML=labels.map((lb,i)=>{
+    const pct2=(vals[i]/mx)*100,rows=groups[lb]||[];
+    const dt=rows.slice(0,10).map(r=>{let h='';if(fm.claim)h+='单号: '+esc(String(r[fm.claim]||''));if(fm.status||fm.closed)h+='　状态: '+esc(String(r[fm.status||fm.closed]||''));if(fm.model)h+='　车型: '+esc(String(r[fm.model]||''));if(fm.fee)h+='　费用: '+fmtM(parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''))||0);return'<div>'+h+'</div>'}).join('')+(rows.length>10?'<div style="color:var(--t3)">...还有 '+(rows.length-10)+' 条</div>':'');
+    return'<li onclick="this.classList.toggle(\'exp\');this.nextElementSibling.classList.toggle(\'show\')"><span class="rk" style="background:'+CHART_COLORS[i%CHART_COLORS.length]+'">'+(i+1)+'</span><span class="nm" title="'+esc(lb)+'">'+esc(lb)+'</span><span class="bar"><span class="bar-i" style="width:'+pct2+'%;background:'+CHART_COLORS[i%CHART_COLORS.length]+'"></span></span><span class="vl">'+fmtN(vals[i])+'</span><span class="aw">▶</span></li><div class="dtl">'+dt+'</div>';
+  }).join('');
+}
+
+function buildTable(id,rows,isEmpty){
+  const tc=document.getElementById('tc-'+id),tw=document.getElementById('tw-'+id);if(!tc||!tw)return;
+  tc.textContent=rows.length+' 条';if(!rows.length){tw.innerHTML='<div style="padding:36px;text-align:center;color:var(--t3)">无数据</div>';return}
+  const heads=MOD_DATA[id].heads,fm=MOD_DATA[id].fm,vis=heads.slice(0,14);
+  let h='<table><thead><tr><th>#</th>';vis.forEach(v=>h+='<th>'+esc(v)+'</th>');h+='</tr></thead><tbody>';
+  rows.forEach((r,i)=>{
+    h+='<tr><td style="color:var(--t3)">'+(i+1)+'</td>';
+    vis.forEach(v=>{
+      const val=String(r[v]??'');
+      if(v===fm.closed||v===fm.delivery){const y=isYes(val)||val.includes('关闭')||val.includes('closed')||val.includes('完成');h+='<td><span class="tag '+(y?'tag-g':'tag-y')+'">'+esc(val)+'</span></td>'}
+      else if(v===fm.status){const t=val.toLowerCase();const c=t.includes('关闭')||t.includes('closed')||t.includes('完成')||t.includes('结算');h+='<td><span class="tag '+(c?'tag-g':'tag-r')+'">'+esc(val)+'</span></td>'}
+      else if(isEmpty&&v===fm.supplier){h+='<td style="color:#f87171;font-weight:700;background:rgba(239,68,68,.1)">'+esc(val||'(空)')+'</td>'}
+      else h+='<td title="'+esc(val)+'">'+esc(val)+'</td>';
+    });h+='</tr>';
+  });
+  h+='</tbody></table>';tw.innerHTML=h;
+}
+
+function showEmptyMod(id){const md=MOD_DATA[id];if(!md)return;const rows=md.data.filter(r=>!r[md.fm.supplier]||String(r[md.fm.supplier]).trim()==='');if(!rows.length)return;document.getElementById('tc-'+id).textContent=rows.length+' 条未匹配供应商记录';buildTable(id,rows,true);document.querySelector('#mod-'+id+' .tbl-card').scrollIntoView({behavior:'smooth'})}
+
+// ── 导出 ──
+function dlCSV(id){const md=MOD_DATA[id];if(!md)return;const ec=v=>{const s=String(v??'');return/[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};const csv=md.heads.map(ec).join(',')+'\n'+md.data.map(r=>md.heads.map(h=>ec(r[h])).join(',')).join('\n');tg(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}),MODS[id].name+'.csv')}
+function dlXLSX(id){const md=MOD_DATA[id];if(!md)return;const ws=XLSX.utils.json_to_sheet(md.data,{header:md.heads});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,MODS[id].name);tg(new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),MODS[id].name+'.xlsx')}
+function tg(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href)}
+
+// ── 分享功能：下载带数据的独立HTML ──
+function dlStandalone(modId){
+  const md=MOD_DATA[modId];if(!md||!md.data.length)return alert('无数据可导出');
+  try{
+    const dataJson=JSON.stringify({mod:modId,d:md.data,h:md.heads}).replace(/<\/script>/gi,'<\\/script>');
+    const embedScript='<script>window.EMBED_DATA='+dataJson+';<\/script>';
+    const html='<!DOCTYPE html>'+document.documentElement.outerHTML.replace('</head>',embedScript+'</head>');
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='索赔看板-'+new Date().toISOString().slice(0,10)+'.html';a.click();URL.revokeObjectURL(a.href);
+  }catch(e){alert('导出失败: '+e.message)}
+}
+
+// ── 初始化 ──
+renderPolicyGrid();
+let cachedMod='';
+
+// 优先检查内嵌数据
+if(window.EMBED_DATA&&window.EMBED_DATA.d&&window.EMBED_DATA.d.length){
+  const em=window.EMBED_DATA;
+  MOD_DATA[em.mod]={data:em.d,heads:em.h,fm:detectAll(em.mod,em.h)};
+  saveMod(em.mod);cachedMod=em.mod;
+}
+
+// 设置上传
+Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm:{}}});
+
+// 异步加载 IndexedDB 缓存
+(async()=>{
+  for(const id of Object.keys(MODS)){
+    if(MOD_DATA[id]&&MOD_DATA[id].data&&MOD_DATA[id].data.length)continue;
+    const ok=await loadMod(id);
+    if(ok){
+      MOD_DATA[id].fm=detectAll(id,MOD_DATA[id].heads);
+      document.getElementById('cache-'+id).classList.remove('hidden');
+      const ts=new Date().toLocaleString('zh-CN');
+      document.getElementById('ct-'+id).textContent='缓存 · '+MOD_DATA[id].data.length+' 条';
+      updateInfo(id);updateBadge(id);
+      if(id==='claim'){
+        const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
+        const st=document.getElementById('claim-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
+        const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 缓存正常 · '+MOD_DATA[id].data.length+' 条 · '+ts}
+      }
+      if(!cachedMod)cachedMod=id;
+    }else{
+      updateInfo(id);updateBadge(id);
+      if(id==='claim'){const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='📭 暂无缓存数据'}}
+    }
+  }
+  if(cachedMod)switchMod(cachedMod);
+})();
+</script>
+</body>
+</html>

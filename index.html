@@ -448,18 +448,17 @@ function handleFile(id,f){const ext=f.name.split('.').pop().toLowerCase();if(ext
 function parseCSV(id,text){const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return alert('CSV 内容不足');const hd=splitLine(lines[0]);loadData(id,lines.slice(1).map(line=>{const v=splitLine(line);const o={};hd.forEach((h,i)=>o[h]=v[i]??'');return o}))}
 function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}
 
-function loadData(id,rows){
+async function loadData(id,rows){
   if(!rows||!rows.length)return alert('无数据');
   const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
   MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-  saveMod(id);updateInfo(id);updateBadge(id);
-  // 更新状态文字
-  const statusEl=document.getElementById('claim-status');
-  if(statusEl)statusEl.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-  // 启用下载按钮
-  const dlBtn=document.getElementById('btnDlCsv');
-  if(dlBtn)dlBtn.disabled=false;
-  // 清空旧看板，触发渲染
+  await saveMod(id);
+  updateInfo(id);updateBadge(id);
+  if(id==='claim'){
+    const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+    const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
+    const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
+  }
   const dash=document.getElementById('dash-'+id);
   if(dash)dash.innerHTML='';
   switchMod(id);

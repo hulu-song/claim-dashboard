@@ -479,22 +479,40 @@ function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){co
 
 async function loadData(id,rows){
   if(!rows||!rows.length)return alert('无数据');
+  const dash=document.getElementById('dash-'+id);
   try{
     const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
     MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-    await saveMod(id);
+    // 先显示看板容器和加载提示
+    if(dash){dash.innerHTML='<div style="padding:40px;text-align:center;color:var(--t2)">⏳ 数据加载中...</div>';dash.classList.remove('hidden')}
     updateInfo(id);updateBadge(id);
+    await saveMod(id);
     if(id==='claim'){
       const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
       const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
       const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
     }
-    const dash=document.getElementById('dash-'+id);
+    // 直接渲染，不用 switchMod
     if(dash)dash.innerHTML='';
-    switchMod(id);
+    currentMod=id;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.mod===id));
+    document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod-'+id));
+    const dp=document.getElementById('detail-'+id);
+    if(dp){dp.style.display='none';dp.classList.remove('active')}
+    setTimeout(()=>{
+      try{
+        showDash(id);
+        if(dash&&!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
+          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板HTML未生成，请检查控制台</div>';
+        }
+      }catch(e){
+        console.error('渲染失败:',e);
+        if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'<br><br>请按F12打开控制台查看详细错误</div>';
+      }
+    },400);
   }catch(e){
     console.error('loadData 失败:',e);
-    alert('数据加载失败: '+e.message);
+    if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 数据加载失败: '+esc(e.message)+'</div>';
   }
 }
 

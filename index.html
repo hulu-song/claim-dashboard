@@ -356,8 +356,18 @@ function switchMod(id){
     dash.classList.remove('hidden');
     const dp=document.getElementById('detail-'+id);
     if(dp){dp.style.display='none';dp.classList.remove('active')}
-    // 每次切换都重新渲染（简单可靠，避免状态不一致）
-    setTimeout(()=>{try{showDash(id)}catch(e){console.error('渲染失败:',e)}},300);
+    setTimeout(()=>{
+      try{
+        showDash(id);
+        // 验证是否渲染成功
+        if(!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
+          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板渲染失败：HTML未生成</div>';
+        }
+      }catch(e){
+        console.error('渲染失败:',e);
+        dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'</div>';
+      }
+    },300);
   }
 }
 
@@ -469,18 +479,23 @@ function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){co
 
 async function loadData(id,rows){
   if(!rows||!rows.length)return alert('无数据');
-  const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
-  MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-  await saveMod(id);
-  updateInfo(id);updateBadge(id);
-  if(id==='claim'){
-    const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-    const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
-    const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
+  try{
+    const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
+    MOD_DATA[id]={data:rows,heads:heads,fm:fm};
+    await saveMod(id);
+    updateInfo(id);updateBadge(id);
+    if(id==='claim'){
+      const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+      const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
+      const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
+    }
+    const dash=document.getElementById('dash-'+id);
+    if(dash)dash.innerHTML='';
+    switchMod(id);
+  }catch(e){
+    console.error('loadData 失败:',e);
+    alert('数据加载失败: '+e.message);
   }
-  const dash=document.getElementById('dash-'+id);
-  if(dash)dash.innerHTML='';
-  switchMod(id);
 }
 
 function updateInfo(id){const md=MOD_DATA[id];if(!md||!md.data.length){['ui-t-','ui-s-','ui-c-','ui-o-','ui-a-','ui-r-'].forEach(p=>{const e=document.getElementById(p+id);if(e)e.textContent='0'});return}

@@ -219,7 +219,7 @@ tr:hover td{background:rgba(249,115,22,.04)}
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <!-- 从右到左：上传 → 下载 → 清空 -->
-        <div class="up-box" id="ub-claim" style="padding:8px 16px;border-radius:10px;margin:0;flex:none;border-style:solid;border-width:1px;order:3"><span class="ub" style="margin:0;padding:6px 14px;font-size:12px">📤 上传数据</span><input type="file" id="fi-claim" accept=".csv,.xlsx,.xls"></div>
+        <label for="fi-claim" class="up-box" style="padding:8px 16px;border-radius:10px;margin:0;flex:none;border-style:solid;border-width:1px;order:3;cursor:pointer"><span class="ub" style="margin:0;padding:6px 14px;font-size:12px;pointer-events:none">📤 上传数据</span></label><input type="file" id="fi-claim" accept=".csv,.xlsx,.xls" style="display:none">
         <button class="btn btn-ol btn-sm" onclick="dlCSV('claim')" id="btnDlCsv" disabled title="下载当前数据为CSV" style="order:2">📥 下载数据</button>
         <button class="btn btn-r btn-sm" onclick="clearMod('claim')" title="清空所有数据" style="order:1">🗑️ 清空数据</button>
       </div>
@@ -473,14 +473,8 @@ function clearMod(id){
 }
 
 function setupUpload(id){
-  const ub=document.getElementById('ub-'+id);
   const fi=document.getElementById('fi-'+id);
-  if(!ub||!fi){console.error('上传元素未找到:',id);return}
-  // 点击整个区域触发文件选择
-  ub.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fi.click()});
-  ub.addEventListener('dragover',e=>{e.preventDefault();ub.classList.add('over')});
-  ub.addEventListener('dragleave',()=>ub.classList.remove('over'));
-  ub.addEventListener('drop',e=>{e.preventDefault();ub.classList.remove('over');if(e.dataTransfer.files.length)handleFile(id,e.dataTransfer.files[0])});
+  if(!fi){console.error('文件输入未找到:',id);return}
   fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(id,e.target.files[0]);e.target.value=''});
   console.log('上传绑定成功:',id);
 }

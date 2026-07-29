@@ -476,17 +476,43 @@ function clearMod(id){
 
 function setupUpload(id){
   const fi=document.getElementById('fi-'+id);
-  if(!fi){console.error('文件输入未找到:',id);return}
+  if(!fi){console.error('[上传] 元素未找到:',id);return}
   fi.addEventListener('change',function(e){
+    console.log('[上传] change事件触发, files:',this.files?this.files.length:0);
     if(this.files&&this.files.length){
-      handleFile(id,this.files[0]);
-      this.value='';// 清空，允许重复上传同一文件
+      const file=this.files[0];
+      console.log('[上传] 选择文件:',file.name,'大小:',file.size,'类型:',file.type);
+      handleFile(id,file);
+      this.value='';
     }
   });
-  console.log('上传绑定成功:',id);
+  console.log('[上传] 绑定成功:',id);
 }
-function handleFile(id,f){const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){const r=new FileReader();r.onload=e=>parseCSV(id,e.target.result);r.readAsText(f)}else if(ext==='xlsx'||ext==='xls'){const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});loadData(id,XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){alert('解析失败: '+err.message)}};r.readAsArrayBuffer(f)}else alert('请上传 CSV/XLSX/XLS 文件')}
-function parseCSV(id,text){const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return alert('CSV 内容不足');const hd=splitLine(lines[0]);loadData(id,lines.slice(1).map(line=>{const v=splitLine(line);const o={};hd.forEach((h,i)=>o[h]=v[i]??'');return o}))}
+function handleFile(id,f){
+  const ext=f.name.split('.').pop().toLowerCase();
+  console.log('[解析] 文件扩展名:',ext);
+  if(ext==='csv'){
+    const r=new FileReader();
+    r.onload=e=>{console.log('[解析] CSV读取完成, 长度:',e.target.result.length);parseCSV(id,e.target.result)};
+    r.onerror=e=>console.error('[解析] CSV读取失败:',e);
+    r.readAsText(f);
+  }else if(ext==='xlsx'||ext==='xls'){
+    const r=new FileReader();
+    r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});console.log('[解析] XLSX解析完成, 行数:',rows.length);loadData(id,rows)}catch(err){console.error('[解析] XLSX失败:',err);alert('解析失败: '+err.message)}};
+    r.onerror=e=>console.error('[解析] XLSX读取失败:',e);
+    r.readAsArrayBuffer(f);
+  }else{console.warn('[解析] 不支持的格式:',ext);alert('请上传 CSV/XLSX/XLS 文件')}
+}
+function parseCSV(id,text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  console.log('[解析] CSV行数:',lines.length);
+  if(lines.length<2)return alert('CSV 内容不足');
+  const hd=splitLine(lines[0]);
+  console.log('[解析] CSV表头:',hd);
+  const rows=lines.slice(1).map(line=>{const v=splitLine(line);const o={};hd.forEach((h,i)=>o[h]=v[i]??'');return o});
+  console.log('[解析] CSV数据行:',rows.length);
+  loadData(id,rows);
+}
 function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}
 
 async function loadData(id,rows){

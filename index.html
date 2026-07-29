@@ -472,7 +472,18 @@ function clearMod(id){
   }
 }
 
-function setupUpload(id){const ub=document.getElementById('ub-'+id),fi=document.getElementById('fi-'+id);if(!ub||!fi)return;ub.addEventListener('click',()=>fi.click());ub.addEventListener('dragover',e=>{e.preventDefault();ub.classList.add('over')});ub.addEventListener('dragleave',()=>ub.classList.remove('over'));ub.addEventListener('drop',e=>{e.preventDefault();ub.classList.remove('over');if(e.dataTransfer.files.length)handleFile(id,e.dataTransfer.files[0])});fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(id,e.target.files[0])})}
+function setupUpload(id){
+  const ub=document.getElementById('ub-'+id);
+  const fi=document.getElementById('fi-'+id);
+  if(!ub||!fi){console.error('上传元素未找到:',id);return}
+  // 点击整个区域触发文件选择
+  ub.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fi.click()});
+  ub.addEventListener('dragover',e=>{e.preventDefault();ub.classList.add('over')});
+  ub.addEventListener('dragleave',()=>ub.classList.remove('over'));
+  ub.addEventListener('drop',e=>{e.preventDefault();ub.classList.remove('over');if(e.dataTransfer.files.length)handleFile(id,e.dataTransfer.files[0])});
+  fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(id,e.target.files[0]);e.target.value=''});
+  console.log('上传绑定成功:',id);
+}
 function handleFile(id,f){const ext=f.name.split('.').pop().toLowerCase();if(ext==='csv'){const r=new FileReader();r.onload=e=>parseCSV(id,e.target.result);r.readAsText(f)}else if(ext==='xlsx'||ext==='xls'){const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});loadData(id,XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(err){alert('解析失败: '+err.message)}};r.readAsArrayBuffer(f)}else alert('请上传 CSV/XLSX/XLS 文件')}
 function parseCSV(id,text){const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return alert('CSV 内容不足');const hd=splitLine(lines[0]);loadData(id,lines.slice(1).map(line=>{const v=splitLine(line);const o={};hd.forEach((h,i)=>o[h]=v[i]??'');return o}))}
 function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}

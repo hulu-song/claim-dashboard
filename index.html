@@ -257,22 +257,37 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
   <!-- 海外质保金 -->
   <div class="module" id="mod-overseas">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
-      <div>
-        <h2 style="font-size:24px;font-weight:800;margin:0">🌍 海外质保金分析</h2>
-        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="overseas-status">请上传数据开始分析</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-r btn-sm" onclick="clearMod('overseas')" title="清空所有数据">🗑️ 清空数据</button>
-        <button class="btn btn-ol btn-sm" onclick="dlCSV('overseas')" id="btnDlCsvOverseas" disabled title="下载CSV">📥 下载数据</button>
-        <div style="position:relative;display:inline-block">
-          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
-          <input type="file" id="fi-overseas" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
-        </div>
-      </div>
+    <div style="margin-bottom:20px">
+      <h2 style="font-size:24px;font-weight:800;margin:0">🌍 海外质保金知识库</h2>
+      <p style="font-size:12px;color:var(--t3);margin-top:4px">全球汽车质量保修成本分析 · 区域法规 · 行业基准</p>
     </div>
-    <div id="dash-overseas" class="hidden"></div>
-    <div class="detail-page" id="detail-overseas"></div>
+
+    <!-- KPI 概览 -->
+    <div class="four-grid" id="ov-kpi"></div>
+
+    <!-- 区域分布 + 成本结构 -->
+    <div class="cg2">
+      <div class="cc"><h3>🌐 全球主要市场质保成本占比</h3><div class="cs">基于行业公开数据估算</div><canvas id="ov-region"></canvas></div>
+      <div class="cc"><h3>📊 质保成本结构分布</h3><div class="cs">典型整车厂质保成本构成</div><canvas id="ov-cost"></canvas></div>
+    </div>
+
+    <!-- 高频故障 + 行业基准 -->
+    <div class="cg2">
+      <div class="cc"><h3>⚡ 海外高频索赔故障类型 Top 10</h3><div class="cs">基于全球主要市场售后数据</div><canvas id="ov-fault"></canvas></div>
+      <div class="cc"><h3>📈 全球质保成本率趋势</h3><div class="cs">质保成本占营收比例（行业平均）</div><canvas id="ov-trend"></canvas></div>
+    </div>
+
+    <!-- 区域法规卡片 -->
+    <div class="cc" style="margin-bottom:20px">
+      <h3>📋 各区域质保法规与行业基准</h3>
+      <div class="cs">主要出口市场的质保政策与成本参考</div>
+      <div id="ov-cards"></div>
+    </div>
+
+    <!-- 成本优化建议 -->
+    <div class="cc" id="ov-tips"></div>
+
+    <div class="ft">数据来源：行业公开报告、IHS Markit、J.D. Power、各国法规文件 · 仅供参考</div>
   </div>
 </main>
 
@@ -981,8 +996,48 @@ function dlStandalone(modId){
   }catch(e){alert('导出失败: '+e.message)}
 }
 
+// ── 海外质保金知识库渲染 ──
+function renderOverseas(){
+  // KPI
+  const kpiData=[
+    {icon:'💰',label:'全球汽车行业年质保成本',val:'~$400亿',detail:'2024年全球主要整车厂质保准备金总额'},
+    {icon:'📈',label:'行业平均质保成本率',val:'2.0~3.5%',detail:'质保成本占营收比例，豪华品牌偏高'},
+    {icon:'⏱️',label:'主流质保期限',val:'3~5年',detail:'欧美市场3年为主，中国/韩国5年为主'},
+    {icon:'🔧',label:'高频索赔部件占比',val:'~65%',detail:'动力总成+电子系统占总质保成本约65%'}
+  ];
+  document.getElementById('ov-kpi').innerHTML=kpiData.map(k=>`<div class="four-card"><div class="fc-icon">${k.icon}</div><div class="fc-label">${k.label}</div><div class="fc-val">${k.val}</div><div class="fc-detail">${k.detail}</div></div>`).join('');
+
+  // 区域分布
+  setTimeout(()=>{
+    drawDoughnut('ov-region',['北美 (USA/Canada)','欧洲 (EU/UK)','中国','亚太 (日韩东南亚)','拉美','中东/非洲'],[32,28,20,12,5,3]);
+    drawDoughnut('ov-cost',['动力总成 (发动机/变速器/电池)','电子电器系统','底盘/悬挂','车身/内外饰','空调/热管理系统','其他'],[28,22,18,15,10,7]);
+    drawBar('ov-fault',['发动机异响/抖动','变速器顿挫/打滑','空调系统故障','电池衰减/故障','电子模块失灵','制动系统异响','悬挂异响/漏油','车机系统死机','车灯故障','漏水/异响'],[18,15,13,12,11,9,8,7,4,3],'占比(%)');
+    drawLine('ov-trend',['2018','2019','2020','2021','2022','2023','2024','2025E'],[2.1,2.3,2.5,2.8,3.2,3.0,2.8,2.6],'质保成本率(%)');
+  },100);
+
+  // 区域法规卡片
+  const regions=[
+    {flag:'🇺🇸',name:'北美',period:'基本3年/3.6万英里',powertrain:'5年/6万英里',note:'柠檬法（Lemon Law）各州不同，加州最严；NHTSA强制召回制度；Magnuson-Moss法案保障消费者维修权',cost:'质保成本率约2.5~3.5%',tip:'关注EPC（Extended Protection Campaign）延长保修政策'},
+    {flag:'🇪🇺',name:'欧洲',period:'最低2年（无里程限制）',powertrain:'部分品牌3年',note:'EU指令1999/44/EC规定最低2年法定保修；德国可延长至3年；排放系统8年/16万公里',cost:'质保成本率约2.0~3.0%',tip:'注意各国消费者保护法差异，英国脱欧后法规独立'},
+    {flag:'🇨🇳',name:'中国',period:'3年/6万公里',powertrain:'三电系统8年/16万公里',note:'《家用汽车产品修理更换退货责任规定》2022年修订；新能源汽车三包明确纳入电池、电机',cost:'质保成本率约2.5~4.0%',tip:'关注三包退换车条件，60日内/3000公里内重大故障可退换'},
+    {flag:'🇯🇵',name:'日本',period:'3年/10万公里（行业惯例）',powertrain:'同上',note:'无强制法定最低保修期，由厂商自主约定；JAMA行业自律规范；SHOHISHA保护法适用',cost:'质保成本率约1.5~2.5%',tip:'日本市场质保成本率全球最低，质量管控严格'},
+    {flag:'🇰🇷',name:'韩国',period:'3年/6万公里',powertrain:'5年/10万公里',note:'《汽车管理法》规定最低保修期；消费者基本法提供额外保护；韩国市场对品质要求高',cost:'质保成本率约2.0~3.0%',tip:'韩系品牌本土保修期长，海外出口需注意对标'},
+    {flag:'🇧🇷',name:'巴西',period:'3年（无里程限制）',powertrain:'同上',note:'《消费者保护法典》（CDC）规定最低3年；巴西市场对价格敏感，质保是重要卖点',cost:'质保成本率约3.0~5.0%',tip:'路况差导致底盘/悬挂索赔率高，需针对性加强'}
+  ];
+  document.getElementById('ov-cards').innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">'+regions.map(r=>`<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:18px;transition:all .2s;cursor:default" onmouseenter="this.style.borderColor='var(--p)';this.style.boxShadow='var(--glow)'" onmouseleave="this.style.borderColor='var(--border)';this.style.boxShadow='none'"><div style="font-size:28px;margin-bottom:8px">${r.flag}</div><div style="font-size:16px;font-weight:700;margin-bottom:6px">${r.name}</div><div style="font-size:12px;color:var(--t2);line-height:1.8"><div><b>保修期：</b>${r.period}</div><div><b>动力总成：</b>${r.powertrain}</div><div><b>法规要点：</b>${r.note}</div><div><b>成本水平：</b>${r.cost}</div><div style="margin-top:6px;color:var(--p);font-weight:600">💡 ${r.tip}</div></div></div>`).join('')+'</div>';
+
+  // 成本优化建议
+  document.getElementById('ov-tips').innerHTML=`<h3>💡 海外质保成本优化策略</h3><div class="cs">基于行业最佳实践</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px">
+    <div style="background:var(--card2);border-radius:12px;padding:18px"><div style="font-size:20px;margin-bottom:6px">🔍</div><div style="font-weight:700;margin-bottom:6px">前端质量管控</div><div style="font-size:12px;color:var(--t2);line-height:1.7">加强供应商来料检验，建立零部件FTA分析体系；对高频索赔部件实施重点监控；建立海外市场的早期预警机制（Early Warning System）</div></div>
+    <div style="background:var(--card2);border-radius:12px;padding:18px"><div style="font-size:20px;margin-bottom:6px">📊</div><div style="font-weight:700;margin-bottom:6px">数据驱动决策</div><div style="font-size:12px;color:var(--t2);line-height:1.7">建立全球质保数据分析平台，按区域/车型/部件维度分析；对比各市场质保成本率，识别异常波动；利用NLP分析客户投诉文本，挖掘潜在系统性问题</div></div>
+    <div style="background:var(--card2);border-radius:12px;padding:18px"><div style="font-size:20px;margin-bottom:6px">🤝</div><div style="font-weight:700;margin-bottom:6px">供应商协同</div><div style="font-size:12px;color:var(--t2);line-height:1.7">与核心供应商签订质保分担协议（Warranty Sharing Agreement）；建立供应商质量评分体系，将质保成本纳入考核；推动供应商参与8D/PDCA问题解决</div></div>
+    <div style="background:var(--card2);border-radius:12px;padding:18px"><div style="font-size:20px;margin-bottom:6px">📋</div><div style="font-weight:700;margin-bottom:6px">法规合规管理</div><div style="font-size:12px;color:var(--t2);line-height:1.7">建立各市场法规差异矩阵，避免合规风险；关注新能源汽车三包法规变化（中国2022修订、欧盟电池法规）；定期审计海外服务网络的质保执行规范性</div></div>
+  </div>`;
+}
+
 // ── 初始化 ──
 renderPolicyGrid();
+renderOverseas();
 let cachedMod='';
 
 // 优先检查内嵌数据

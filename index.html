@@ -634,12 +634,14 @@ function showDash(id){
 
     // 绘制图表
     setTimeout(()=>{
-      drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'索赔数量');
-      if(faultKeys.length)drawDoughnut('ch-'+id+'-fault',faultKeys.slice(0,8),faultKeys.slice(0,8).map(k=>byFault[k].length));
-      if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'索赔数量');
-      if(modelKeys.length)drawBar('ch-'+id+'-model',modelKeys.slice(0,8),modelKeys.slice(0,8).map(k=>byModel[k].length),'数量');
-      buildTable(id,data,false);
-    },200);
+      try{
+        if(supFK.length)drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'索赔数量');
+        if(faultKeys.length)drawDoughnut('ch-'+id+'-fault',faultKeys.slice(0,8),faultKeys.slice(0,8).map(k=>byFault[k].length));
+        if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'索赔数量');
+        if(modelKeys.length)drawBar('ch-'+id+'-model',modelKeys.slice(0,8),modelKeys.slice(0,8).map(k=>byModel[k].length),'数量');
+        buildTable(id,data,false);
+      }catch(e){console.error('图表绘制失败:',e)}
+    },300);
   }
 
   // ── 结算单 ──

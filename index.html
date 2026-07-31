@@ -237,14 +237,21 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
   <!-- 结算单 -->
   <div class="module" id="mod-settle">
-    <div class="card"><h2>💰 结算单分析</h2><div class="sub">上传结算单数据，自动生成分析看板</div>
-      <div id="cache-settle" class="cache-bar hidden"><span>💾</span><span id="ct-settle"></span><button onclick="dlStandalone('settle')" style="border-color:var(--p);color:var(--p)">📥 下载带数据HTML</button><button onclick="clearMod('settle')">🗑️ 清除</button></div>
-      <div class="up-row">
-        <div class="up-box" id="ub-settle"><div class="ic">📤</div><div><span class="ub">选择文件</span></div><p>拖拽或点击 · CSV / XLSX / XLS</p><input type="file" id="fi-settle" accept=".csv,.xlsx,.xls"></div>
-        <div class="up-info"><div class="ui-row"><span class="ui-icon">📊</span>总记录：<span class="ui-val" id="ui-t-settle">0</span></div><div class="ui-row"><span class="ui-icon">🏢</span>供应商：<span class="ui-val" id="ui-s-settle">0</span></div><div class="ui-row"><span class="ui-icon">💵</span>总金额：<span class="ui-val" id="ui-a-settle">0</span></div><div class="ui-row"><span class="ui-icon">✅</span>已结算：<span class="ui-val" id="ui-c-settle">0</span></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
+      <div>
+        <h2 style="font-size:24px;font-weight:800;margin:0">💰 结算单分析</h2>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="settle-status">请上传数据开始分析</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-r btn-sm" onclick="clearMod('settle')" title="清空所有数据">🗑️ 清空数据</button>
+        <button class="btn btn-ol btn-sm" onclick="dlCSV('settle')" id="btnDlCsvSettle" disabled title="下载CSV">📥 下载数据</button>
+        <div style="position:relative;display:inline-block">
+          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
+          <input type="file" id="fi-settle" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
+        </div>
       </div>
     </div>
-    <div class="hidden" id="dash-settle"></div>
+    <div id="dash-settle" class="hidden"></div>
     <div class="detail-page" id="detail-settle"></div>
   </div>
 
@@ -329,7 +336,18 @@ function renderPolicyGrid(){
 // ── 数据模块 ──
 const MODS={
   claim:{name:'索赔单',cacheKey:'mod_claim_v3',fields:{supplier:['供应商名称(主因件)','供应商(主因件)','供应商','supplier','vendor','供货商','供方','厂商','主因件供应商','供应商名称'],fee:['零件二次索赔总费用（不含增值税）','二次索赔总费用','二次索赔费用','索赔费用','总费用','fee','amount','cost','索赔金额'],closed:['是否关闭','关闭','isclosed','closed','是否完结'],status:['状态','status','索赔状态'],model:['车型','vehicle_model','model','车系'],delivery:['是否创建提货单','提货单','delivery','创建提货单','提货单号'],claim:['索赔单号','claim','单号','编号'],region:['国家','地区','region','country'],faultType:['故障类型','故障','fault','问题类型','缺陷类型','故障模式','故障码描述','故障码'],settleNo:['结算单号','结算单','settle_no','settlement'],vin:['VIN','vin','车架号'],brand:['品牌','brand'],warehouse:['仓库','warehouse','库房'],partNo:['零件号(主因件)','零件号','part_no','partno'],partName:['零件名称(主因件)','零件名称','part_name'],claimType:['索赔类型','claim_type','claimtype'],receiveTime:['接收时间','接收日期','receive_time','receive_time'],closeReason:['关闭原因','close_reason','closereason'],alarm:['是否报警','报警','alarm'],pureLabor:['是否纯工时索赔','纯工时','pure_labor'],returnType:['返运类型','返运','return_type'],dutyRatio:['责任比例','责任','duty_ratio'],quantity:['数量','qty','quantity'],unit:['单位','unit']}},
-  settle:{name:'结算单',cacheKey:'mod_settle_v3',fields:{supplier:['供应商','供应商名称','supplier','vendor','供货商','供方','厂商'],fee:['结算金额','金额','总金额','费用','fee','amount','cost','结算费用','应付金额'],closed:['结算状态','是否结算','状态','status','isclosed','closed','是否完成'],status:['结算状态','状态','status','付款状态'],model:['车型','vehicle_model','model','车系'],claim:['结算单号','单号','编号','claim','settle_no'],region:['国家','地区','region','country'],faultType:['故障类型','故障','fault','问题类型','缺陷类型']}},
+  settle:{name:'结算单',cacheKey:'mod_settle_v4',fields:{
+    settleNo:['结算单号','结算单号(SAP)','单号','编号','settle_no','settlement_no'],
+    settleType:['结算单类型','类型','结算类型','settle_type'],
+    supplier:['供应商名称','供应商','supplier','vendor','供货商','供方','厂商'],
+    status:['状态','status','结算状态','付款状态'],
+    planDate:['计划结算日期','计划日期','plan_date','planned_date'],
+    pubDate:['发布日期','发布','publish_date','pub_date'],
+    confirmDate:['确认日期','确认','confirm_date'],
+    adjustFee:['手动调整费用','调整费用','手动调整','adjust_fee','manual_adjust'],
+    finalPay:['最终支付费用','最终支付','支付费用','final_pay','payment','最终费用'],
+    dutyRatio:['责任比例','责任','duty_ratio','duty']
+  }},
   overseas:{name:'海外质保金',cacheKey:'mod_overseas_v3',fields:{supplier:['供应商','供应商名称','supplier','vendor','供货商','供方','厂商'],fee:['金额','质保金','总金额','费用','fee','amount','cost','质保金额','索赔金额'],closed:['状态','是否关闭','关闭','status','isclosed','closed','是否完成'],status:['状态','status','质保状态','处理状态'],model:['车型','vehicle_model','model','车系'],claim:['单号','编号','质保单号','claim'],region:['国家','地区','region','country','国家/地区','市场'],faultType:['故障类型','故障','fault','问题类型','缺陷类型']}}
 };
 
@@ -472,6 +490,10 @@ function clearMod(id){
     const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=true;
     const dbg=document.getElementById('cache-debug');if(dbg)dbg.innerHTML='📭 暂无缓存数据';
   }
+  if(id==='settle'){
+    const st=document.getElementById('settle-status');if(st)st.textContent='请上传数据开始分析';
+    const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=true;
+  }
 }
 
 function setupUpload(id){
@@ -525,10 +547,15 @@ async function loadData(id,rows){
     if(dash){dash.innerHTML='<div style="padding:40px;text-align:center;color:var(--t2)">⏳ 数据加载中...</div>';dash.classList.remove('hidden')}
     updateInfo(id);updateBadge(id);
     await saveMod(id);
+    // 更新各模块状态文字和下载按钮
     if(id==='claim'){
       const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
       const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
       const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
+    }
+    if(id==='settle'){
+      const st=document.getElementById('settle-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+      const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
     }
     // 直接渲染，不用 switchMod
     if(dash)dash.innerHTML='';
@@ -629,6 +656,32 @@ function showDash(id){
     dash.innerHTML=html;dash.classList.remove('hidden');
   }
 
+  // ── 结算单专用：四大模块 ──
+  else if(id==='settle'){
+    // 计算结算单特有指标
+    let totalFinalPay=0;const finalPayBySup={};
+    const fpField=fm.finalPay;
+    if(fpField)data.forEach(r=>{const n=parseFloat(String(r[fpField]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFinalPay+=v;if(su){const k=String(r[su]||'(空)');finalPayBySup[k]=(finalPayBySup[k]||0)+v}});
+
+    let html='<div class="four-grid">';
+    html+='<div class="four-card" onclick="showDetail(\'settle\',\'total\')"><div class="fc-icon">📋</div><div class="fc-label">结算单总量</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">涉及 '+supKeys.length+' 家供应商</div><div class="fc-arrow">→</div></div>';
+    html+='<div class="four-card" onclick="showDetail(\'settle\',\'supplier\')"><div class="fc-icon">🏢</div><div class="fc-label">供应商数量</div><div class="fc-val">'+fmtN(supKeys.length)+'</div><div class="fc-detail">'+(emptyN?'<span style="color:#f87171">'+emptyN+' 条未匹配</span> · ':'')+'有效供应商 '+supFK.length+' 家</div><div class="fc-arrow">→</div></div>';
+    html+='<div class="four-card" onclick="showDetail(\'settle\',\'fee\')"><div class="fc-icon">💰</div><div class="fc-label">最终支付总费用</div><div class="fc-val">'+(fpField?fmtM(totalFinalPay):'—')+'</div><div class="fc-detail">'+(fpField?'平均 '+fmtM(totalFinalPay/T)+'/单':'未检测到最终支付费用字段')+'</div><div class="fc-arrow">→</div></div>';
+    html+='<div class="four-card" onclick="showDetail(\'settle\',\'status\')"><div class="fc-icon">📊</div><div class="fc-label">状态分布</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">点击查看状态明细</div><div class="fc-arrow">→</div></div>';
+    html+='</div>';
+
+    html+='<div class="chart-grid">';
+    html+='<div class="chart-card" onclick="showDetail(\'settle\',\'supplier\')"><h3>🏆 TOP10 供应商（按最终支付费用）</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
+    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\'settle\',\'month\')"><h3>📈 月度结算趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
+    html+='<div class="chart-card" onclick="showDetail(\'settle\',\'supplier\')"><h3>💰 供应商最终支付费用排名</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-fee"></canvas></div>';
+    if(fm.status)html+='<div class="chart-card" onclick="showDetail(\'settle\',\'status\')"><h3>📊 状态分布</h3><div class="cs">点击查看状态明细 →</div><canvas id="ch-'+id+'-st"></canvas></div>';
+    html+='</div>';
+
+    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
+    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    dash.innerHTML=html;dash.classList.remove('hidden');
+  }
+
   // ── 其他模块：通用看板 ──
   else{
     let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">';
@@ -686,6 +739,28 @@ function showDash(id){
           const mTop=modelKeys.slice(0,8);
           destroyChart('ch-'+id+'-model');
           chartInstances['ch-'+id+'-model']=new Chart(cv4,{type:'bar',data:{labels:mTop.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'数量',data:mTop.map(k=>byModel[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:CHART_COLORS.slice(0,8),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+        }
+      }
+
+      // 结算单特有：最终支付费用柱状图 + 状态分布
+      if(id==='settle'){
+        const cv5=document.getElementById('ch-'+id+'-fee');
+        if(cv5&&cv5.parentElement&&cv5.parentElement.clientWidth>0){
+          const fpField2=fm.finalPay;
+          if(fpField2){
+            const sorted2=supFK.slice().sort((a,b)=>(finalPayBySup[b]||0)-(finalPayBySup[a]||0)).slice(0,10);
+            destroyChart('ch-'+id+'-fee');
+            chartInstances['ch-'+id+'-fee']=new Chart(cv5,{type:'bar',data:{labels:sorted2.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'最终支付费用',data:sorted2.map(k=>finalPayBySup[k]||0),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+          }
+        }
+        if(fm.status){
+          const cv6=document.getElementById('ch-'+id+'-st');
+          if(cv6&&cv6.parentElement&&cv6.parentElement.clientWidth>0){
+            const bySt2={};data.forEach(r=>{const k=String(r[fm.status]||'(空)');(bySt2[k]??=[]).push(r)});
+            const stK2=Object.keys(bySt2).sort((a,b)=>bySt2[b].length-bySt2[a].length).slice(0,8);
+            destroyChart('ch-'+id+'-st');
+            chartInstances['ch-'+id+'-st']=new Chart(cv6,{type:'doughnut',data:{labels:stK2.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:stK2.map(k=>bySt2[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
+          }
         }
       }
 
@@ -944,6 +1019,10 @@ Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm
         const st=document.getElementById('claim-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
         const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 缓存正常 · '+MOD_DATA[id].data.length+' 条 · '+ts}
       }
+      if(id==='settle'){
+        const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
+        const st=document.getElementById('settle-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
+      }
       if(!cachedMod)cachedMod=id;
     }else{
       updateInfo(id);updateBadge(id);
@@ -955,4 +1034,3 @@ Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm
 </script>
 </body>
 </html>
-

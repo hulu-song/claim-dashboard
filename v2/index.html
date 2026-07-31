@@ -265,14 +265,10 @@ tr:hover td{background:rgba(249,115,22,.04)}
     <!-- KPI 概览 -->
     <div class="four-grid" id="ov-kpi"></div>
 
-    <!-- 区域分布 + 成本结构 -->
-    <div class="cg2">
+    <!-- 四个图表：上2下2 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px">
       <div class="cc"><h3>🌐 全球主要市场质保成本占比</h3><div class="cs">基于行业公开数据估算</div><canvas id="ov-region"></canvas></div>
       <div class="cc"><h3>📊 质保成本结构分布</h3><div class="cs">典型整车厂质保成本构成</div><canvas id="ov-cost"></canvas></div>
-    </div>
-
-    <!-- 高频故障 + 行业基准 -->
-    <div class="cg2">
       <div class="cc"><h3>⚡ 海外高频索赔故障类型 Top 10</h3><div class="cs">基于全球主要市场售后数据</div><canvas id="ov-fault"></canvas></div>
       <div class="cc"><h3>📈 全球质保成本率趋势</h3><div class="cs">质保成本占营收比例（行业平均）</div><canvas id="ov-trend"></canvas></div>
     </div>

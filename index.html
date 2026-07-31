@@ -590,188 +590,144 @@ function updateBadge(id){const md=MOD_DATA[id];const b=document.getElementById('
 function showDash(id){
   const md=MOD_DATA[id];if(!md||!md.data.length)return;
   const{data,fm}=md;const T=data.length;const cfg=MODS[id];
+  const dash=document.getElementById('dash-'+id);
 
-  // 分组
+  // ── 通用分组 ──
   const bySup={};if(fm.supplier)data.forEach(r=>{const k=String(r[fm.supplier]||'(空)');(bySup[k]??=[]).push(r)});
   const supKeys=Object.keys(bySup).sort((a,b)=>bySup[b].length-bySup[a].length);
   const emptyN=bySup['(空)']?bySup['(空)'].length:0;
   const supF={};supKeys.filter(k=>k!=='(空)').forEach(k=>{supF[k]=bySup[k]});
   const supFK=Object.keys(supF).sort((a,b)=>supF[b].length-supF[a].length);
 
-  const cf=fm.closed||fm.status;let cN=0,oN=0;
-  if(fm.closed)data.forEach(r=>{const v=String(r[fm.closed]||'').trim().toLowerCase();if(v==='是'||v==='1'||v==='true'||v.includes('关闭')||v.includes('完成'))cN++;else oN++});
-
-  // 二次索赔总费用（是否关闭=否 的金额）
-  let totalFee=-1;let unclosedFee=0;const feeBySup={};
-  if(fm.fee){totalFee=0;data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;
-    const isUnclosed=fm.closed&&(String(r[fm.closed]||'').trim().toLowerCase()==='否'||String(r[fm.closed]||'').trim()==='0');
-    if(isUnclosed)unclosedFee+=v;
-    if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}
-  })}
-
-  const byModel={};let modelKeys=[];
-  if(fm.model){data.forEach(r=>{const k=String(r[fm.model]||'(空)');(byModel[k]??=[]).push(r)});modelKeys=Object.keys(byModel).sort((a,b)=>byModel[b].length-byModel[a].length)}
-
-  const byFault={};let faultKeys=[];
-  if(fm.faultType){data.forEach(r=>{const k=String(r[fm.faultType]||'(空)');if(k!=='(空)')(byFault[k]??=[]).push(r)});faultKeys=Object.keys(byFault).sort((a,b)=>byFault[b].length-byFault[a].length)}
-
-  // 无法下发单据（状态为"匹配未完成"或"匹配完成"）
-  let noDeliveryN=0;const noDeliveryRows=[];const noDeliveryByStatus={};
-  if(fm.status){data.forEach(r=>{const v=String(r[fm.status]||'').trim();if(v.includes('匹配未完成')||v.includes('匹配完成')){noDeliveryN++;noDeliveryRows.push(r);noDeliveryByStatus[v]=(noDeliveryByStatus[v]||0)+1}})}
-
-  // 结算单：最终支付费用（提前计算，drawCharts 需要）
-  let totalFinalPay=0;const finalPayBySup={};
-  if(fm.finalPay)data.forEach(r=>{const n=parseFloat(String(r[fm.finalPay]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFinalPay+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');finalPayBySup[k]=(finalPayBySup[k]||0)+v}});
-
-  // 月度趋势
+  // 月度趋势（通用）
   let monthData={};
-  data.forEach(r=>{
-    let dateStr='';
-    for(const h of md.heads){const v=String(r[h]||'');if(/\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}/.test(v)){dateStr=v;break}}
-    if(!dateStr)return;
-    const m=dateStr.match(/(\d{4})[\-\/\.](\d{1,2})/);
-    if(m){const key=m[1]+'-'+m[2].padStart(2,'0');monthData[key]=(monthData[key]||0)+1}
-  });
+  data.forEach(r=>{let ds='';for(const h of md.heads){const v=String(r[h]||'');if(/\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}/.test(v)){ds=v;break}}if(!ds)return;const m=ds.match(/(\d{4})[\-\/\.](\d{1,2})/);if(m){const key=m[1]+'-'+m[2].padStart(2,'0');monthData[key]=(monthData[key]||0)+1}});
   const monthKeys=Object.keys(monthData).sort();
 
-  const dash=document.getElementById('dash-'+id);
-
-  // ── 索赔单专用：四大模块 ──
+  // ── 索赔单 ──
   if(id==='claim'){
+    const cf=fm.closed||fm.status;let cN=0,oN=0;
+    if(fm.closed)data.forEach(r=>{const v=String(r[fm.closed]||'').trim().toLowerCase();if(v==='是'||v==='1'||v==='true'||v.includes('关闭')||v.includes('完成'))cN++;else oN++});
+    let totalFee=-1,unclosedFee=0;const feeBySup={};
+    if(fm.fee){totalFee=0;data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;if(fm.closed&&(String(r[fm.closed]||'').trim().toLowerCase()==='否'))unclosedFee+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}})}
+    const byFault={};let faultKeys=[];
+    if(fm.faultType)data.forEach(r=>{const k=String(r[fm.faultType]||'(空)');if(k!=='(空)')(byFault[k]??=[]).push(r)});faultKeys=Object.keys(byFault).sort((a,b)=>byFault[b].length-byFault[a].length);
+    let noDeliveryN=0;const noDeliveryByStatus={};
+    if(fm.status)data.forEach(r=>{const v=String(r[fm.status]||'').trim();if(v.includes('匹配未完成')||v.includes('匹配完成')){noDeliveryN++;noDeliveryByStatus[v]=(noDeliveryByStatus[v]||0)+1}});
+    const byModel={};let modelKeys=[];
+    if(fm.model)data.forEach(r=>{const k=String(r[fm.model]||'(空)');(byModel[k]??=[]).push(r)});modelKeys=Object.keys(byModel).sort((a,b)=>byModel[b].length-byModel[a].length);
+
     let html='<div class="four-grid">';
-    html+='<div class="four-card" onclick="showDetail(\'claim\',\'total\')"><div class="fc-icon">📋</div><div class="fc-label">索赔单总量</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">涉及 '+supKeys.length+' 家供应商'+(cf?' · 已关闭 '+cN+' · 未关闭 '+oN:'')+'</div><div class="fc-arrow">→</div></div>';
-    html+='<div class="four-card" onclick="showDetail(\'claim\',\'supplier\')"><div class="fc-icon">🏢</div><div class="fc-label">供应商数量</div><div class="fc-val">'+fmtN(supKeys.length)+'</div><div class="fc-detail">'+(emptyN?'<span style="color:#f87171">'+emptyN+' 条未匹配</span> · ':'')+'有效供应商 '+supFK.length+' 家</div><div class="fc-arrow">→</div></div>';
-    html+='<div class="four-card" onclick="showDetail(\'claim\',\'fee\')"><div class="fc-icon">💰</div><div class="fc-label">二次索赔总费用</div><div class="fc-val">'+(totalFee>=0?fmtM(unclosedFee):'—')+'</div><div class="fc-detail">'+(totalFee>=0?'未关闭(是否关闭=否): '+fmtM(unclosedFee)+' · 全部: '+fmtM(totalFee):'未检测到费用字段')+'</div><div class="fc-arrow">→</div></div>';
-    const ndDetail=Object.keys(noDeliveryByStatus).map(k=>k+': '+noDeliveryByStatus[k]+'条').join(' · ');
-    html+='<div class="four-card" onclick="showDetail(\'claim\',\'nodelivery\')"><div class="fc-icon">⚠️</div><div class="fc-label">无法下发单据</div><div class="fc-val" style="color:#f87171">'+fmtN(noDeliveryN)+'</div><div class="fc-detail">'+(ndDetail||'暂无匹配数据')+'</div><div class="fc-arrow">→</div></div>';
+    html+=fourCard('📋','索赔单总量',fmtN(T),'涉及 '+supKeys.length+' 家供应商 · 已关闭 '+cN+' · 未关闭 '+oN,'claim','total');
+    html+=fourCard('🏢','供应商数量',fmtN(supKeys.length),(emptyN?emptyN+' 条未匹配 · ':'')+'有效 '+supFK.length+' 家','claim','supplier');
+    html+=fourCard('💰','二次索赔总费用',totalFee>=0?fmtM(unclosedFee):'—',totalFee>=0?'未关闭: '+fmtM(unclosedFee)+' · 全部: '+fmtM(totalFee):'','claim','fee');
+    html+=fourCard('⚠️','无法下发单据',fmtN(noDeliveryN),Object.keys(noDeliveryByStatus).map(k=>k+': '+noDeliveryByStatus[k]).join(' · ')||'暂无','claim','nodelivery');
     html+='</div>';
-
-    // 图表区域
     html+='<div class="chart-grid">';
-    html+='<div class="chart-card" onclick="showDetail(\'claim\',\'supplier\')"><h3>🏆 TOP10 供应商</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
-    if(faultKeys.length)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'fault\')"><h3>🔍 故障类型分布</h3><div class="cs">点击查看故障明细 →</div><canvas id="ch-'+id+'-fault"></canvas></div>';
-    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'month\')"><h3>📈 月度索赔趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
-    if(modelKeys.length)html+='<div class="chart-card" onclick="showDetail(\'claim\',\'model\')"><h3>🚗 车型分布</h3><div class="cs">'+modelKeys.slice(0,8).length+' 种车型</div><canvas id="ch-'+id+'-model"></canvas></div>';
+    html+=chartCard('🏆','TOP10 供应商','ch-'+id+'-sup','showDetail(\'claim\',\'supplier\')');
+    if(faultKeys.length)html+=chartCard('🔍','故障类型分布','ch-'+id+'-fault','showDetail(\'claim\',\'fault\')');
+    if(monthKeys.length>1)html+=chartCard('📈','月度索赔趋势','ch-'+id+'-month','showDetail(\'claim\',\'month\')');
+    if(modelKeys.length)html+=chartCard('🚗','车型分布','ch-'+id+'-model','showDetail(\'claim\',\'model\')');
     html+='</div>';
-
-    // 表格
-    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
-    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    html+=tableHTML(id,cfg.name);
     dash.innerHTML=html;dash.classList.remove('hidden');
+
+    // 绘制图表
+    setTimeout(()=>{
+      drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'索赔数量');
+      if(faultKeys.length)drawDoughnut('ch-'+id+'-fault',faultKeys.slice(0,8),faultKeys.slice(0,8).map(k=>byFault[k].length));
+      if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'索赔数量');
+      if(modelKeys.length)drawBar('ch-'+id+'-model',modelKeys.slice(0,8),modelKeys.slice(0,8).map(k=>byModel[k].length),'数量');
+      buildTable(id,data,false);
+    },200);
   }
 
-  // ── 结算单专用：四大模块 ──
+  // ── 结算单 ──
   else if(id==='settle'){
-    const fpField=fm.finalPay;
-    if(fpField)data.forEach(r=>{const n=parseFloat(String(r[fpField]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFinalPay+=v;if(su){const k=String(r[su]||'(空)');finalPayBySup[k]=(finalPayBySup[k]||0)+v}});
+    let totalPay=0;const payBySup={};
+    if(fm.finalPay)data.forEach(r=>{const n=parseFloat(String(r[fm.finalPay]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalPay+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');payBySup[k]=(payBySup[k]||0)+v}});
+    const byStatus={};if(fm.status)data.forEach(r=>{const k=String(r[fm.status]||'(空)');(byStatus[k]??=[]).push(r)});
+    const statusKeys=Object.keys(byStatus).sort((a,b)=>byStatus[b].length-byStatus[a].length);
 
     let html='<div class="four-grid">';
-    html+='<div class="four-card" onclick="showDetail(\'settle\',\'total\')"><div class="fc-icon">📋</div><div class="fc-label">结算单总量</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">涉及 '+supKeys.length+' 家供应商</div><div class="fc-arrow">→</div></div>';
-    html+='<div class="four-card" onclick="showDetail(\'settle\',\'supplier\')"><div class="fc-icon">🏢</div><div class="fc-label">供应商数量</div><div class="fc-val">'+fmtN(supKeys.length)+'</div><div class="fc-detail">'+(emptyN?'<span style="color:#f87171">'+emptyN+' 条未匹配</span> · ':'')+'有效供应商 '+supFK.length+' 家</div><div class="fc-arrow">→</div></div>';
-    html+='<div class="four-card" onclick="showDetail(\'settle\',\'fee\')"><div class="fc-icon">💰</div><div class="fc-label">最终支付总费用</div><div class="fc-val">'+(fpField?fmtM(totalFinalPay):'—')+'</div><div class="fc-detail">'+(fpField?'平均 '+fmtM(totalFinalPay/T)+'/单':'未检测到最终支付费用字段')+'</div><div class="fc-arrow">→</div></div>';
-    html+='<div class="four-card" onclick="showDetail(\'settle\',\'status\')"><div class="fc-icon">📊</div><div class="fc-label">状态分布</div><div class="fc-val">'+fmtN(T)+'</div><div class="fc-detail">点击查看状态明细</div><div class="fc-arrow">→</div></div>';
+    html+=fourCard('📋','结算单总量',fmtN(T),'涉及 '+supKeys.length+' 家供应商','settle','total');
+    html+=fourCard('🏢','供应商数量',fmtN(supKeys.length),(emptyN?emptyN+' 条未匹配 · ':'')+'有效 '+supFK.length+' 家','settle','supplier');
+    html+=fourCard('💰','最终支付总费用',fm.finalPay?fmtM(totalPay):'—',fm.finalPay?'平均 '+fmtM(totalPay/T)+'/单':'','settle','fee');
+    html+=fourCard('📊','状态分布',fmtN(T),statusKeys.slice(0,3).map(k=>k+': '+byStatus[k].length).join(' · '),'settle','status');
     html+='</div>';
-
     html+='<div class="chart-grid">';
-    html+='<div class="chart-card" onclick="showDetail(\'settle\',\'supplier\')"><h3>🏆 TOP10 供应商（按最终支付费用）</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
-    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\'settle\',\'month\')"><h3>📈 月度结算趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
-    html+='<div class="chart-card" onclick="showDetail(\'settle\',\'supplier\')"><h3>💰 供应商最终支付费用排名</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-fee"></canvas></div>';
-    if(fm.status)html+='<div class="chart-card" onclick="showDetail(\'settle\',\'status\')"><h3>📊 状态分布</h3><div class="cs">点击查看状态明细 →</div><canvas id="ch-'+id+'-st"></canvas></div>';
+    html+=chartCard('🏆','TOP10 供应商（按最终支付费用）','ch-'+id+'-sup','showDetail(\'settle\',\'supplier\')');
+    html+=chartCard('💰','供应商最终支付费用排名','ch-'+id+'-fee','');
+    if(monthKeys.length>1)html+=chartCard('📈','月度结算趋势','ch-'+id+'-month','showDetail(\'settle\',\'month\')');
+    if(fm.status)html+=chartCard('📊','状态分布','ch-'+id+'-st','showDetail(\'settle\',\'status\')');
     html+='</div>';
-
-    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
-    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    html+=tableHTML(id,cfg.name);
     dash.innerHTML=html;dash.classList.remove('hidden');
+
+    setTimeout(()=>{
+      drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'结算单数量');
+      if(fm.finalPay){const sorted=supFK.slice().sort((a,b)=>(payBySup[b]||0)-(payBySup[a]||0)).slice(0,10);drawBar('ch-'+id+'-fee',sorted.map(k=>k.length>10?k.slice(0,10)+'…':k),sorted.map(k=>payBySup[k]||0),'最终支付费用')}
+      if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'结算数量');
+      if(fm.status)drawDoughnut('ch-'+id+'-st',statusKeys.slice(0,8),statusKeys.slice(0,8).map(k=>byStatus[k].length));
+      buildTable(id,data,false);
+    },200);
   }
 
-  // ── 其他模块：通用看板 ──
+  // ── 海外质保金 / 通用 ──
   else{
-    let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px">';
+    let totalFee=0;const feeBySup={};
+    if(fm.fee)data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}});
+    const cf=fm.closed||fm.status;let cN=0,oN=0;
+    if(cf)data.forEach(r=>{const v=String(r[cf]||'').toLowerCase();if(v.includes('关闭')||v.includes('完成')||v==='是'||v==='1')cN++;else oN++});
+    const byRegion={};if(fm.region)data.forEach(r=>{const k=String(r[fm.region]||'(空)');(byRegion[k]??=[]).push(r)});
+    const regionKeys=Object.keys(byRegion).sort((a,b)=>byRegion[b].length-byRegion[a].length);
+
+    let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px">';
     html+=kpi('总记录',fmtN(T),'涉及 '+supKeys.length+' 家供应商','');
     if(cf)html+=kpi('已关闭/完成',fmtN(cN),'占比 '+pct(cN,T),'');
     if(cf)html+=kpi('处理中',fmtN(oN),'占比 '+pct(oN,T),'');
-    if(totalFee>=0)html+=kpi('总金额',fmtM(totalFee),'平均 '+fmtM(totalFee/T)+'/单','');
-    html+='</div>';
-    if(emptyN)html+='<div class="warn-box" onclick="showEmptyMod(\''+id+'\')"><span>⚠️</span><span class="wn">'+emptyN+'</span><span>条记录未匹配到供应商（点击查看）</span></div>';
+    if(fm.fee)html+=kpi('总金额',fmtM(totalFee),'平均 '+fmtM(totalFee/T)+'/单','');
+    if(regionKeys.length)html+=kpi('国家/地区',fmtN(regionKeys.length),'','');html+='</div>';
+    if(emptyN)html+='<div class="warn-box" onclick="showEmptyMod(\''+id+'\')"><span>⚠️</span><span class="wn">'+emptyN+'</span><span>条记录未匹配到供应商</span></div>';
     html+='<div class="chart-grid">';
-    html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'supplier\')"><h3>🏆 TOP10 供应商</h3><div class="cs">点击查看供应商详情 →</div><canvas id="ch-'+id+'-sup"></canvas></div>';
-    if(faultKeys.length)html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'fault\')"><h3>🔍 故障类型分布</h3><div class="cs">点击查看故障明细 →</div><canvas id="ch-'+id+'-fault"></canvas></div>';
-    if(monthKeys.length>1)html+='<div class="chart-card" onclick="showDetail(\''+id+'\','+'\'month\')"><h3>📈 月度趋势</h3><div class="cs">点击查看月度明细 →</div><canvas id="ch-'+id+'-month"></canvas></div>';
-    if(modelKeys.length)html+='<div class="chart-card"><h3>🚗 车型分布</h3><div class="cs">'+modelKeys.slice(0,8).length+' 种车型</div><canvas id="ch-'+id+'-model"></canvas></div>';
+    html+=chartCard('🏆','TOP10 供应商','ch-'+id+'-sup','showDetail(\''+id+'\',\'supplier\')');
+    if(fm.fee)html+=chartCard('💰','供应商费用排名','ch-'+id+'-fee','');
+    if(regionKeys.length>1)html+=chartCard('🌍','国家/地区分布','ch-'+id+'-rg','');
+    if(monthKeys.length>1)html+=chartCard('📈','月度趋势','ch-'+id+'-month','showDetail(\''+id+'\',\'month\')');
     html+='</div>';
-    const tL=Math.min(supFK.length,15);
-    html+='<div class="chart-card"><h3>🔎 供应商明细（点击展开）</h3><div class="cs">展示前 '+tL+' 家</div><ul class="clist" id="sl-'+id+'"></ul></div>';
-    html+='<div class="tbl-card"><div class="th"><h3>📋 '+cfg.name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div>';
-    html+='<div class="ft">数据仅在浏览器本地处理</div>';
+    html+=tableHTML(id,cfg.name);
     dash.innerHTML=html;dash.classList.remove('hidden');
-  }
 
-  function drawCharts(attempt){
-    attempt=attempt||0;
-    try{
-      const cv1=document.getElementById('ch-'+id+'-sup');
-      if(!cv1||!cv1.parentElement||cv1.parentElement.clientWidth<=0){
-        if(attempt<20){setTimeout(()=>drawCharts(attempt+1),100);return}
-        console.warn('canvas 未就绪，跳过图表绘制');return;
-      }
-      const t10=supFK.slice(0,10);
-      destroyChart('ch-'+id+'-sup');
-      chartInstances['ch-'+id+'-sup']=new Chart(cv1,{type:'bar',data:{labels:t10.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'索赔数量',data:t10.map(k=>supF[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
-
-      if(faultKeys.length){
-        const cv2=document.getElementById('ch-'+id+'-fault');
-        if(cv2&&cv2.parentElement&&cv2.parentElement.clientWidth>0){
-          const fTop=faultKeys.slice(0,8);
-          destroyChart('ch-'+id+'-fault');
-          chartInstances['ch-'+id+'-fault']=new Chart(cv2,{type:'doughnut',data:{labels:fTop.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:fTop.map(k=>byFault[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
-        }
-      }
-
-      if(monthKeys.length>1){
-        const cv3=document.getElementById('ch-'+id+'-month');
-        if(cv3&&cv3.parentElement&&cv3.parentElement.clientWidth>0){
-          destroyChart('ch-'+id+'-month');
-          chartInstances['ch-'+id+'-month']=new Chart(cv3,{type:'line',data:{labels:monthKeys,datasets:[{label:'索赔数量',data:monthKeys.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
-        }
-      }
-
-      if(modelKeys.length){
-        const cv4=document.getElementById('ch-'+id+'-model');
-        if(cv4&&cv4.parentElement&&cv4.parentElement.clientWidth>0){
-          const mTop=modelKeys.slice(0,8);
-          destroyChart('ch-'+id+'-model');
-          chartInstances['ch-'+id+'-model']=new Chart(cv4,{type:'bar',data:{labels:mTop.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'数量',data:mTop.map(k=>byModel[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:CHART_COLORS.slice(0,8),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
-        }
-      }
-
-      // 结算单特有：最终支付费用柱状图 + 状态分布
-      if(id==='settle'){
-        const cv5=document.getElementById('ch-'+id+'-fee');
-        if(cv5&&cv5.parentElement&&cv5.parentElement.clientWidth>0){
-          const fpField2=fm.finalPay;
-          if(fpField2){
-            const sorted2=supFK.slice().sort((a,b)=>(finalPayBySup[b]||0)-(finalPayBySup[a]||0)).slice(0,10);
-            destroyChart('ch-'+id+'-fee');
-            chartInstances['ch-'+id+'-fee']=new Chart(cv5,{type:'bar',data:{labels:sorted2.map(k=>k.length>10?k.slice(0,10)+'…':k),datasets:[{label:'最终支付费用',data:sorted2.map(k=>finalPayBySup[k]||0),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
-          }
-        }
-        if(fm.status){
-          const cv6=document.getElementById('ch-'+id+'-st');
-          if(cv6&&cv6.parentElement&&cv6.parentElement.clientWidth>0){
-            const bySt2={};data.forEach(r=>{const k=String(r[fm.status]||'(空)');(bySt2[k]??=[]).push(r)});
-            const stK2=Object.keys(bySt2).sort((a,b)=>bySt2[b].length-bySt2[a].length).slice(0,8);
-            destroyChart('ch-'+id+'-st');
-            chartInstances['ch-'+id+'-st']=new Chart(cv6,{type:'doughnut',data:{labels:stK2.map(k=>k.length>12?k.slice(0,12)+'…':k),datasets:[{data:stK2.map(k=>bySt2[k].length),backgroundColor:CHART_BG.slice(0,8),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true,pointStyleWidth:10}}}}});
-          }
-        }
-      }
-
-      renderList(id,supFK.slice(0,tL),supFK.slice(0,tL).map(k=>supF[k].length),supF);
+    setTimeout(()=>{
+      drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'数量');
+      if(fm.fee){const sorted=supFK.slice().sort((a,b)=>(feeBySup[b]||0)-(feeBySup[a]||0)).slice(0,10);drawBar('ch-'+id+'-fee',sorted.map(k=>k.length>10?k.slice(0,10)+'…':k),sorted.map(k=>feeBySup[k]||0),'金额')}
+      if(regionKeys.length>1)drawDoughnut('ch-'+id+'-rg',regionKeys.slice(0,8),regionKeys.slice(0,8).map(k=>byRegion[k].length));
+      if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'数量');
       buildTable(id,data,false);
-      const fi=document.getElementById('fi-'+id);if(fi)fi.value='';
-    }catch(e){console.error('图表渲染失败:',e)}
+    },200);
   }
-  setTimeout(()=>drawCharts(0),200);
+}
+
+// ── HTML 辅助函数 ──
+function fourCard(icon,label,val,detail,mod,page){return'<div class="four-card" onclick="showDetail(\''+mod+'\',\''+page+'\')"><div class="fc-icon">'+icon+'</div><div class="fc-label">'+label+'</div><div class="fc-val">'+val+'</div><div class="fc-detail">'+detail+'</div><div class="fc-arrow">→</div></div>'}
+function chartCard(icon,title,canvasId,onclick){return'<div class="chart-card"'+(onclick?' onclick="'+onclick+'"':'')+'><h3>'+icon+' '+title+'</h3><div class="cs">'+(onclick?'点击查看详情 →':'')+'</div><canvas id="'+canvasId+'"></canvas></div>'}
+function tableHTML(id,name){return'<div class="tbl-card"><div class="th"><h3>📋 '+name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div><div class="ft">数据仅在浏览器本地处理</div>'}
+
+// ── 图表绘制（独立函数，不依赖 showDash 作用域）──
+function drawBar(canvasId,labels,vals,label){
+  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  destroyChart(canvasId);
+  chartInstances[canvasId]=new Chart(cv,{type:'bar',data:{labels:labels,datasets:[{label:label,data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:CHART_COLORS.slice(0,labels.length),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+}
+function drawDoughnut(canvasId,labels,vals){
+  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  destroyChart(canvasId);
+  chartInstances[canvasId]=new Chart(cv,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+}
+function drawLine(canvasId,labels,vals,label){
+  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  destroyChart(canvasId);
+  chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels:labels,datasets:[{label:label,data:vals,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
 }
 
 function kpi(label,val,detail,onclick){return'<div class="kpi"'+(onclick?' onclick="'+onclick+'"':'')+'><div class="kl">'+label+'</div><div class="kv">'+val+'</div><div class="kd">'+detail+'</div></div>'}

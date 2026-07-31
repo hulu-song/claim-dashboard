@@ -257,14 +257,21 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
   <!-- 海外质保金 -->
   <div class="module" id="mod-overseas">
-    <div class="card"><h2>🌍 海外质保金分析</h2><div class="sub">上传海外质保金数据，自动生成分析看板</div>
-      <div id="cache-overseas" class="cache-bar hidden"><span>💾</span><span id="ct-overseas"></span><button onclick="dlStandalone('overseas')" style="border-color:var(--p);color:var(--p)">📥 下载带数据HTML</button><button onclick="clearMod('overseas')">🗑️ 清除</button></div>
-      <div class="up-row">
-        <div class="up-box" id="ub-overseas"><div class="ic">📤</div><div><span class="ub">选择文件</span></div><p>拖拽或点击 · CSV / XLSX / XLS</p><input type="file" id="fi-overseas" accept=".csv,.xlsx,.xls"></div>
-        <div class="up-info"><div class="ui-row"><span class="ui-icon">📊</span>总记录：<span class="ui-val" id="ui-t-overseas">0</span></div><div class="ui-row"><span class="ui-icon">🏢</span>供应商：<span class="ui-val" id="ui-s-overseas">0</span></div><div class="ui-row"><span class="ui-icon">💵</span>总金额：<span class="ui-val" id="ui-a-overseas">0</span></div><div class="ui-row"><span class="ui-icon">🌍</span>国家/地区：<span class="ui-val" id="ui-r-overseas">0</span></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
+      <div>
+        <h2 style="font-size:24px;font-weight:800;margin:0">🌍 海外质保金分析</h2>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="overseas-status">请上传数据开始分析</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-r btn-sm" onclick="clearMod('overseas')" title="清空所有数据">🗑️ 清空数据</button>
+        <button class="btn btn-ol btn-sm" onclick="dlCSV('overseas')" id="btnDlCsvOverseas" disabled title="下载CSV">📥 下载数据</button>
+        <div style="position:relative;display:inline-block">
+          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
+          <input type="file" id="fi-overseas" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
+        </div>
       </div>
     </div>
-    <div class="hidden" id="dash-overseas"></div>
+    <div id="dash-overseas" class="hidden"></div>
     <div class="detail-page" id="detail-overseas"></div>
   </div>
 </main>
@@ -490,6 +497,10 @@ function clearMod(id){
     const st=document.getElementById('settle-status');if(st)st.textContent='请上传数据开始分析';
     const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=true;
   }
+  if(id==='overseas'){
+    const st=document.getElementById('overseas-status');if(st)st.textContent='请上传数据开始分析';
+    const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=true;
+  }
 }
 
 function setupUpload(id){
@@ -550,6 +561,10 @@ async function loadData(id,rows){
     if(id==='settle'){
       const st=document.getElementById('settle-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
       const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
+    }
+    if(id==='overseas'){
+      const st=document.getElementById('overseas-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+      const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=false;
     }
     // 切换到当前模块并渲染
     switchMod(id);
@@ -653,27 +668,30 @@ function showDash(id){
     },200);
   }
 
-  // ── 海外质保金 / 通用 ──
-  else{
+  // ── 海外质保金 ──
+  else if(id==='overseas'){
     let totalFee=0;const feeBySup={};
     if(fm.fee)data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFee+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');feeBySup[k]=(feeBySup[k]||0)+v}});
     const cf=fm.closed||fm.status;let cN=0,oN=0;
     if(cf)data.forEach(r=>{const v=String(r[cf]||'').toLowerCase();if(v.includes('关闭')||v.includes('完成')||v==='是'||v==='1')cN++;else oN++});
     const byRegion={};if(fm.region)data.forEach(r=>{const k=String(r[fm.region]||'(空)');(byRegion[k]??=[]).push(r)});
     const regionKeys=Object.keys(byRegion).sort((a,b)=>byRegion[b].length-byRegion[a].length);
+    const feeByRegion={};
+    if(fm.fee&&fm.region)data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;const k=String(r[fm.region]||'(空)');feeByRegion[k]=(feeByRegion[k]||0)+v});
 
-    let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px">';
-    html+=kpi('总记录',fmtN(T),'涉及 '+supKeys.length+' 家供应商','');
-    if(cf)html+=kpi('已关闭/完成',fmtN(cN),'占比 '+pct(cN,T),'');
-    if(cf)html+=kpi('处理中',fmtN(oN),'占比 '+pct(oN,T),'');
-    if(fm.fee)html+=kpi('总金额',fmtM(totalFee),'平均 '+fmtM(totalFee/T)+'/单','');
-    if(regionKeys.length)html+=kpi('国家/地区',fmtN(regionKeys.length),'','');html+='</div>';
-    if(emptyN)html+='<div class="warn-box" onclick="showEmptyMod(\''+id+'\')"><span>⚠️</span><span class="wn">'+emptyN+'</span><span>条记录未匹配到供应商</span></div>';
+    let html='<div class="four-grid">';
+    html+=fourCard('📋','质保金总量',fmtN(T),'涉及 '+supKeys.length+' 家供应商 · '+regionKeys.length+' 个国家/地区','overseas','total');
+    html+=fourCard('🏢','供应商数量',fmtN(supKeys.length),(emptyN?emptyN+' 条未匹配 · ':'')+'有效 '+supFK.length+' 家','overseas','supplier');
+    html+=fourCard('💰','质保金总额',fm.fee?fmtM(totalFee):'—',fm.fee?'平均 '+fmtM(totalFee/T)+'/单':'','overseas','fee');
+    html+=fourCard('🌍','国家/地区',fmtN(regionKeys.length),regionKeys.slice(0,3).map(k=>k+': '+byRegion[k].length).join(' · '),'overseas','region');
+    html+='</div>';
+    if(emptyN)html+='<div class="warn-box" onclick="showEmptyMod(\'overseas\')"><span>⚠️</span><span class="wn">'+emptyN+'</span><span>条记录未匹配到供应商（点击查看）</span></div>';
     html+='<div class="chart-grid">';
-    html+=chartCard('🏆','TOP10 供应商','ch-'+id+'-sup','showDetail(\''+id+'\',\'supplier\')');
+    html+=chartCard('🏆','TOP10 供应商','ch-'+id+'-sup','showDetail(\'overseas\',\'supplier\')');
     if(fm.fee)html+=chartCard('💰','供应商费用排名','ch-'+id+'-fee','');
-    if(regionKeys.length>1)html+=chartCard('🌍','国家/地区分布','ch-'+id+'-rg','');
-    if(monthKeys.length>1)html+=chartCard('📈','月度趋势','ch-'+id+'-month','showDetail(\''+id+'\',\'month\')');
+    if(regionKeys.length>1)html+=chartCard('🌍','国家/地区分布','ch-'+id+'-rg','showDetail(\'overseas\',\'region\')');
+    if(fm.fee&&regionKeys.length>1)html+=chartCard('💰','各地区质保金','ch-'+id+'-rf','');
+    if(monthKeys.length>1)html+=chartCard('📈','月度趋势','ch-'+id+'-month','showDetail(\'overseas\',\'month\')');
     html+='</div>';
     html+=tableHTML(id,cfg.name);
     dash.innerHTML=html;dash.classList.remove('hidden');
@@ -682,9 +700,19 @@ function showDash(id){
       drawBar('ch-'+id+'-sup',supFK.slice(0,10).map(k=>k.length>10?k.slice(0,10)+'…':k),supFK.slice(0,10).map(k=>supF[k].length),'数量');
       if(fm.fee){const sorted=supFK.slice().sort((a,b)=>(feeBySup[b]||0)-(feeBySup[a]||0)).slice(0,10);drawBar('ch-'+id+'-fee',sorted.map(k=>k.length>10?k.slice(0,10)+'…':k),sorted.map(k=>feeBySup[k]||0),'金额')}
       if(regionKeys.length>1)drawDoughnut('ch-'+id+'-rg',regionKeys.slice(0,8),regionKeys.slice(0,8).map(k=>byRegion[k].length));
+      if(fm.fee&&regionKeys.length>1){const rSorted=regionKeys.slice().sort((a,b)=>(feeByRegion[b]||0)-(feeByRegion[a]||0)).slice(0,10);drawBar('ch-'+id+'-rf',rSorted.map(k=>k.length>10?k.slice(0,10)+'…':k),rSorted.map(k=>feeByRegion[k]||0),'金额')}
       if(monthKeys.length>1)drawLine('ch-'+id+'-month',monthKeys,monthKeys.map(k=>monthData[k]),'数量');
       buildTable(id,data,false);
     },200);
+  }
+
+  // ── 兜底通用 ──
+  else{
+    let html='<div class="kpi-row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px">';
+    html+=kpi('总记录',fmtN(T),'涉及 '+supKeys.length+' 家供应商','');html+='</div>';
+    html+=tableHTML(id,cfg.name);
+    dash.innerHTML=html;dash.classList.remove('hidden');
+    setTimeout(()=>buildTable(id,data,false),200);
   }
 }
 
@@ -886,6 +914,25 @@ function renderDetail(modId,page){
       chartInstances['dtl-month-line']=new Chart(document.getElementById('dtl-month-line'),{type:'line',data:{labels:mK,datasets:[{label:'索赔数量',data:mK.map(k=>monthData[k]),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.15)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:6,pointHoverRadius:10,borderWidth:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
     },100);
   }
+
+  // ── 国家/地区详情 ──
+  else if(page==='region'){
+    const byR={};if(fm.region)data.forEach(r=>{const k=String(r[fm.region]||'(空)');(byR[k]??=[]).push(r)});
+    const rK=Object.keys(byR).sort((a,b)=>byR[b].length-byR[a].length);
+    const feeByR={};
+    if(fm.fee&&fm.region)data.forEach(r=>{const n=parseFloat(String(r[fm.fee]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;const k=String(r[fm.region]||'(空)');feeByR[k]=(feeByR[k]||0)+v});
+    let html='<div class="detail-hd"><h2>🌍 国家/地区详情</h2><button class="btn-back" onclick="backToDash(\''+modId+'\')">← 返回总看板</button></div>';
+    html+='<div class="chart-grid"><div class="chart-card"><h3>地区分布</h3><canvas id="dtl-rg-pie"></canvas></div><div class="chart-card"><h3>地区排名</h3><canvas id="dtl-rg-bar"></canvas></div></div>';
+    html+='<div class="tbl-card"><div class="th"><h3>地区明细</h3><span>'+rK.length+' 个</span></div><div class="tw"><table><thead><tr><th>#</th><th>国家/地区</th><th>数量</th>'+(fm.fee?'<th>金额</th>':'')+'<th>占比</th></tr></thead><tbody>';
+    rK.forEach((k,i)=>html+='<tr><td>'+(i+1)+'</td><td>'+esc(k)+'</td><td>'+fmtN(byR[k].length)+'</td>'+(fm.fee?'<td>'+fmtM(feeByR[k]||0)+'</td>':'')+'<td>'+pct(byR[k].length,T)+'</td></tr>');
+    html+='</tbody></table></div></div>';
+    dp.innerHTML=html;
+    setTimeout(()=>{
+      const top=rK.slice(0,10);
+      destroyChart('dtl-rg-pie');chartInstances['dtl-rg-pie']=new Chart(document.getElementById('dtl-rg-pie'),{type:'doughnut',data:{labels:top,datasets:[{data:top.map(k=>byR[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+      destroyChart('dtl-rg-bar');chartInstances['dtl-rg-bar']=new Chart(document.getElementById('dtl-rg-bar'),{type:'bar',data:{labels:top,datasets:[{label:'数量',data:top.map(k=>byR[k].length),backgroundColor:CHART_BG.slice(0,10),borderColor:CHART_COLORS.slice(0,10),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+    },100);
+  }
 }
 
 function renderList(id,labels,vals,groups){
@@ -967,6 +1014,10 @@ Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm
       if(id==='settle'){
         const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
         const st=document.getElementById('settle-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
+      }
+      if(id==='overseas'){
+        const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=false;
+        const st=document.getElementById('overseas-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
       }
       // 预渲染看板（隐藏状态下生成HTML，切换时直接显示）
       dashRendered[id]=false;

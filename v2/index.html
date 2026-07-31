@@ -364,6 +364,7 @@ const chartInstances={};
 function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
 
 let currentMod='warranty';
+const dashRendered={};// 已渲染的模块
 
 function switchMod(id){
   currentMod=id;
@@ -376,18 +377,11 @@ function switchMod(id){
     dash.classList.remove('hidden');
     const dp=document.getElementById('detail-'+id);
     if(dp){dp.style.display='none';dp.classList.remove('active')}
-    setTimeout(()=>{
-      try{
-        showDash(id);
-        // 验证是否渲染成功
-        if(!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
-          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板渲染失败：HTML未生成</div>';
-        }
-      }catch(e){
-        console.error('渲染失败:',e);
-        dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'</div>';
-      }
-    },300);
+    // 只在首次或数据变化时渲染，避免重复绘制图表
+    if(!dashRendered[id]){
+      dashRendered[id]=true;
+      setTimeout(()=>{try{showDash(id)}catch(e){console.error('渲染失败:',e)}},300);
+    }
   }
 }
 
@@ -479,6 +473,8 @@ async function clearModFromDB(id){
 function clearMod(id){
   clearModFromDB(id);
   MOD_DATA[id]={data:[],heads:[],fm:{}};
+  dashRendered[id]=false;
+  destroyModCharts(id);
   document.getElementById('cache-'+id).classList.add('hidden');
   document.getElementById('dash-'+id).classList.add('hidden');
   document.getElementById('dash-'+id).innerHTML='';
@@ -543,38 +539,20 @@ async function loadData(id,rows){
   try{
     const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
     MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-    // 先显示看板容器和加载提示
+    dashRendered[id]=false;// 重置，强制重新渲染
     if(dash){dash.innerHTML='<div style="padding:40px;text-align:center;color:var(--t2)">⏳ 数据加载中...</div>';dash.classList.remove('hidden')}
     updateInfo(id);updateBadge(id);
     await saveMod(id);
-    // 更新各模块状态文字和下载按钮
     if(id==='claim'){
       const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
       const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
-      const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 数据已保存 · '+rows.length+' 条'}
     }
     if(id==='settle'){
       const st=document.getElementById('settle-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
       const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
     }
-    // 直接渲染，不用 switchMod
-    if(dash)dash.innerHTML='';
-    currentMod=id;
-    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.mod===id));
-    document.querySelectorAll('.module').forEach(m=>m.classList.toggle('active',m.id==='mod-'+id));
-    const dp=document.getElementById('detail-'+id);
-    if(dp){dp.style.display='none';dp.classList.remove('active')}
-    setTimeout(()=>{
-      try{
-        showDash(id);
-        if(dash&&!dash.querySelector('.four-grid')&&!dash.querySelector('.kpi-row')){
-          dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 看板HTML未生成，请检查控制台</div>';
-        }
-      }catch(e){
-        console.error('渲染失败:',e);
-        if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 渲染出错: '+esc(e.message)+'<br><br>请按F12打开控制台查看详细错误</div>';
-      }
-    },400);
+    // 切换到当前模块并渲染
+    switchMod(id);
   }catch(e){
     console.error('loadData 失败:',e);
     if(dash)dash.innerHTML='<div style="padding:40px;color:#f87171;text-align:center">⚠️ 数据加载失败: '+esc(e.message)+'</div>';
@@ -715,21 +693,29 @@ function fourCard(icon,label,val,detail,mod,page){return'<div class="four-card" 
 function chartCard(icon,title,canvasId,onclick){return'<div class="chart-card"'+(onclick?' onclick="'+onclick+'"':'')+'><h3>'+icon+' '+title+'</h3><div class="cs">'+(onclick?'点击查看详情 →':'')+'</div><canvas id="'+canvasId+'"></canvas></div>'}
 function tableHTML(id,name){return'<div class="tbl-card"><div class="th"><h3>📋 '+name+'明细</h3><span id="tc-'+id+'"></span></div><div class="tw" id="tw-'+id+'"></div></div><div class="ft">数据仅在浏览器本地处理</div>'}
 
-// ── 图表绘制（独立函数，不依赖 showDash 作用域）──
+// ── 图表绘制（独立函数）──
+const CHART_OPTS={responsive:true,animation:{duration:300},plugins:{legend:{display:false}}};
+const SCALE_OPTS={scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.3)'}}}};
+
 function drawBar(canvasId,labels,vals,label){
-  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
-  chartInstances[canvasId]=new Chart(cv,{type:'bar',data:{labels:labels,datasets:[{label:label,data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:CHART_COLORS.slice(0,labels.length),borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+  chartInstances[canvasId]=new Chart(cv,{type:'bar',data:{labels,datasets:[{label,data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:CHART_COLORS.slice(0,labels.length),borderWidth:1,borderRadius:4}]},options:{...CHART_OPTS,...SCALE_OPTS}});
 }
 function drawDoughnut(canvasId,labels,vals){
-  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
-  chartInstances[canvasId]=new Chart(cv,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:'#181c26',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'right',labels:{padding:12,usePointStyle:true}}}}});
+  chartInstances[canvasId]=new Chart(cv,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:'#181c26',borderWidth:2}]},options:{...CHART_OPTS,plugins:{legend:{position:'right',labels:{padding:10,usePointStyle:true}}}}});
 }
 function drawLine(canvasId,labels,vals,label){
-  const cv=document.getElementById(canvasId);if(!cv||!cv.parentElement||cv.parentElement.clientWidth<=0)return;
+  const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
-  chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels:labels,datasets:[{label:label,data:vals,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointBackgroundColor:'#f97316',pointRadius:5,pointHoverRadius:8}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.5)'}}}}});
+  chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels,datasets:[{label,data:vals,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:4}]},options:{...CHART_OPTS,...SCALE_OPTS}});
+}
+
+// 清除某个模块的所有图表
+function destroyModCharts(id){
+  Object.keys(chartInstances).filter(k=>k.includes('-'+id+'-')).forEach(destroyChart);
 }
 
 function kpi(label,val,detail,onclick){return'<div class="kpi"'+(onclick?' onclick="'+onclick+'"':'')+'><div class="kl">'+label+'</div><div class="kv">'+val+'</div><div class="kd">'+detail+'</div></div>'}

@@ -955,7 +955,7 @@ function renderOverseas(){
 }
 
 // ── 二次索赔流程 ──
-function renderProcess(){
+function renderProcess_OLD_REPLACED(){
   const steps=[
     {icon:'📋',title:'索赔单下发',time:'每月26日 ~ 次月5日',color:'#f97316',
      desc:'每月月底26日开始到下月月初5号左右，小米陆续下发索赔单。此时供应商系统中索赔单状态为「已下发」。',
@@ -1111,6 +1111,134 @@ function renderProcess(){
       ctx.fillStyle='#444';ctx.font='12px sans-serif';ctx.textAlign='left';
       ctx.fillText(l.text,lx+20,ly+11);lx+=ctx.measureText(l.text).width+40;
     });
+  },150);
+}
+
+// ── 二次索赔流程（新版） ──
+function renderProcess(){
+  const steps=[
+    {icon:'📋',title:'索赔单下发',time:'每月26日 ~ 次月5日',color:'#f97316',
+     desc:'每月月底26日开始到下月月初5号左右，小米陆续下发索赔单。此时供应商系统中索赔单状态为「已下发」。',
+     action:'供应商登录系统查看新下发的索赔单'},
+    {icon:'📦',title:'供应商提交取件',time:'收到索赔单后按需',color:'#3b82f6',
+     desc:'供应商按需在系统中提交取件申请。提交取件前需要先确认索赔单，如对索赔单有疑问，可先不确认、不取货，联系QE/SQE沟通。',
+     action:'确认索赔单 → 提交取件申请'},
+    {icon:'✅',title:'索赔单确认',time:'手动确认 / 30个自然日内自动确认',color:'#16a34a',
+     desc:'供应商手动确认索赔单。如供应商未确认，索赔单下发<span style="color:#f97316;font-weight:800">30个自然日内</span>系统将自动确认。确认后进入结算流程。',
+     action:'供应商手动点击确认，或等待系统自动确认'},
+    {icon:'💰',title:'生成结算单',time:'每月1日 / 15日',color:'#8b5cf6',
+     desc:'每月1号和15号系统自动生成结算单。结算单基于已确认的索赔单生成，包含应付金额等信息。',
+     action:'系统自动生成，供应商可在系统中查看'},
+    {icon:'📝',title:'结算单确认',time:'生成后15个自然日',color:'#0ea5e9',
+     desc:'结算单生成后，供应商有15个自然日进行确认。确认后小米内部走付款流程。',
+     action:'供应商确认结算单，或在期限内提出异议'}
+  ];
+
+  // 时间线
+  let tlHTML='<div style="position:relative;padding:0 0 0 48px">';
+  steps.forEach((s,i)=>{
+    const isLast=i===steps.length-1;
+    tlHTML+='<div style="position:relative;padding-bottom:'+(isLast?0:32)+'px">'
+      +'<div style="position:absolute;left:-48px;top:6px;width:32px;height:32px;border-radius:50%;background:'+s.color+';display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;font-weight:800;z-index:1;box-shadow:0 2px 8px '+s.color+'40">'+(i+1)+'</div>'
+      +(!isLast?'<div style="position:absolute;left:-33px;top:38px;bottom:0;width:2px;background:linear-gradient('+s.color+','+steps[i+1].color+')"></div>':'')
+      +'<div style="background:var(--card2);border:1px solid var(--border);border-left:4px solid '+s.color+';border-radius:12px;padding:18px 20px;margin-left:16px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      +'<span style="font-size:24px">'+s.icon+'</span>'
+      +'<span style="font-size:17px;font-weight:700;color:var(--t1)">'+s.title+'</span>'
+      +'<span style="font-size:12px;background:'+s.color+'18;color:'+s.color+';padding:3px 12px;border-radius:8px;font-weight:700;margin-left:auto">'+s.time+'</span>'
+      +'</div>'
+      +'<div style="font-size:14px;color:var(--t2);line-height:1.8;margin-bottom:8px">'+s.desc+'</div>'
+      +'<div style="font-size:13px;color:'+s.color+';font-weight:700">→ '+s.action+'</div>'
+      +'</div></div>';
+  });
+  tlHTML+='</div>';
+  document.getElementById('flow-timeline').innerHTML=tlHTML;
+
+  // 关键节点
+  document.getElementById('flow-details').innerHTML=
+    '<div class="cc"><h3>⚠️ 关键提醒</h3><div class="cs">供应商必须注意的时间节点</div><div style="margin-top:14px">'
+    +'<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)"><span style="font-size:24px">⏰</span><div><div style="font-weight:700;margin-bottom:3px;color:var(--t1);font-size:15px">月底26日 ~ 月初5日</div><div style="font-size:13px;color:var(--t2)">索赔单陆续下发期间，及时登录系统查看</div></div></div>'
+    +'<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)"><span style="font-size:24px">📅</span><div><div style="font-weight:700;margin-bottom:3px;color:var(--t1);font-size:15px">30个自然日内</div><div style="font-size:13px;color:var(--t2)">索赔单下发后，供应商有30个自然日处理。超时系统自动确认</div></div></div>'
+    +'<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)"><span style="font-size:24px">💰</span><div><div style="font-weight:700;margin-bottom:3px;color:var(--t1);font-size:15px">每月1日 / 15日</div><div style="font-size:13px;color:var(--t2)">结算单生成日，基于已确认索赔单自动生成</div></div></div>'
+    +'<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0"><span style="font-size:24px">🔒</span><div><div style="font-weight:700;margin-bottom:3px;color:#dc2626;font-size:15px">结算单确认后不可逆</div><div style="font-size:13px;color:var(--t2)">小米内部无法走逆向流程，务必在确认前核实</div></div></div>'
+    +'</div></div>'
+    +'<div class="cc"><h3>📞 问题处理流程</h3><div class="cs">遇到问题时的正确处理方式</div><div style="margin-top:14px">'
+    +'<div style="background:rgba(249,115,22,.08);border-left:4px solid #f97316;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:10px;font-size:14px;line-height:1.8;color:var(--t1)"><b style="color:#f97316">1. 索赔单有疑问</b> → 先不确认、不取货 → 在群里反馈 → QE/SQE确认问题 → 联系我处理索赔单</div>'
+    +'<div style="background:rgba(249,115,22,.08);border-left:4px solid #f97316;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:10px;font-size:14px;line-height:1.8;color:var(--t1)"><b style="color:#f97316">2. 需要调整费用</b> → 生成结算单后走申诉流程 → 内部走审批流（流程复杂）</div>'
+    +'<div style="background:rgba(220,38,38,.08);border-left:4px solid #dc2626;border-radius:0 10px 10px 0;padding:14px 16px;font-size:14px;line-height:1.8;color:var(--t1)"><b style="color:#dc2626">3. 结算单确认后</b> → 小米内部无法走逆向流程 → 务必在确认前仔细核实金额</div>'
+    +'</div></div>';
+
+  // 注意事项
+  document.getElementById('flow-notes').innerHTML=
+    '<h3>📌 重要注意事项</h3><div class="cs">务必仔细阅读</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px">'
+    +'<div style="background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2);border-radius:12px;padding:16px"><div style="font-weight:700;margin-bottom:6px;color:#f97316;font-size:15px">⚠️ 及时处理</div><div style="font-size:13px;color:var(--t2);line-height:1.7">索赔单下发后有30个自然日处理时间，有问题及时反馈，不要等到自动确认</div></div>'
+    +'<div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);border-radius:12px;padding:16px"><div style="font-weight:700;margin-bottom:6px;color:#f97316;font-size:15px">📋 先确认再取货</div><div style="font-size:13px;color:var(--t2);line-height:1.7">提交取件前需先确认索赔单，有疑问先沟通再操作</div></div>'
+    +'<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);border-radius:12px;padding:16px"><div style="font-weight:700;margin-bottom:6px;color:#f97316;font-size:15px">💬 群内反馈</div><div style="font-size:13px;color:var(--t2);line-height:1.7">有问题在群里反馈，QE/SQE会确认并协助处理</div></div>'
+    +'<div style="background:rgba(22,163,74,.06);border:1px solid rgba(22,163,74,.2);border-radius:12px;padding:16px"><div style="font-weight:700;margin-bottom:6px;color:#f97316;font-size:15px">✅ 结算前核实</div><div style="font-size:13px;color:var(--t2);line-height:1.7">结算单确认后无法逆向，务必在确认前核实金额和明细</div></div>'
+    +'</div>';
+
+  // 月度时间轴（深色背景+白字+橙色主题）
+  setTimeout(()=>{
+    const cv=document.getElementById('flow-chart');if(!cv)return;
+    const W=cv.parentElement.clientWidth-48,H=320;
+    cv.width=W;cv.height=H;
+    const ctx=cv.getContext('2d');
+    // 深色背景
+    ctx.fillStyle='#1a1a2e';rr(ctx,0,0,W,H,12);ctx.fill();
+
+    const y=160,padL=80,padR=30;
+    const segW=(W-padL-padR)/31;
+
+    // 网格线
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;
+    for(let i=0;i<=31;i++){const x=padL+i*segW;ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,y+30);ctx.stroke()}
+
+    // 主时间轴
+    ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+
+    // 日期标记
+    const marks=[{d:1,l:'1日'},{d:5,l:'5日'},{d:10,l:'10日'},{d:15,l:'15日'},{d:20,l:'20日'},{d:25,l:'25日'},{d:26,l:'26日'},{d:30,l:'30日'}];
+    marks.forEach(m=>{
+      const x=padL+(m.d-1)*segW;
+      ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+      ctx.fillText(m.l,x,y+22);
+      ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x,y+6);ctx.stroke();
+    });
+
+    // 区间色块
+    const drawRange=(start,end,color,label,offsetY)=>{
+      const x1=padL+(start-1)*segW,x2=padL+(end-1)*segW;
+      const bw=Math.max(x2-x1,40),bh=26,by=y-80+offsetY;
+      ctx.fillStyle=color+'40';rr(ctx,x1,by,bw,bh,6);ctx.fill();
+      ctx.strokeStyle=color+'80';ctx.lineWidth=1.5;rr(ctx,x1,by,bw,bh,6);ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+      ctx.fillText(label,x1+bw/2,by+17);
+    };
+    drawRange(26,30,'#f97316','索赔单下发',0);
+    drawRange(1,5,'#f97316','月初下发',0);
+    drawRange(1,30,'#f59e0b','供应商处理期（30个自然日）',34);
+    drawRange(1,1,'#16a34a','1号结算单',68);
+    drawRange(15,15,'#8b5cf6','15号结算单',68);
+
+    // 关键节点
+    const drawNode=(day,color,label)=>{
+      const x=padL+(day-1)*segW;
+      ctx.strokeStyle=color+'50';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x,40);ctx.lineTo(x,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();
+      ctx.fillStyle=color+'40';ctx.beginPath();ctx.arc(x,y,14,0,Math.PI*2);ctx.fill();
+    };
+    drawNode(1,'#16a34a','');drawNode(15,'#8b5cf6','');drawNode(26,'#f97316','');
+
+    // 图例
+    const ly=H-30;ctx.font='12px sans-serif';ctx.textAlign='left';
+    const legends=[{c:'#f97316',t:'索赔单下发/处理期'},{c:'#16a34a',t:'1号生成结算单'},{c:'#8b5cf6',t:'15号生成结算单'}];
+    let lx=padL;
+    legends.forEach(l=>{ctx.fillStyle=l.c;rr(ctx,lx,ly,14,14,3);ctx.fill();ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillText(l.t,lx+20,ly+11);lx+=ctx.measureText(l.t).width+44});
   },150);
 }
 

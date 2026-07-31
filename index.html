@@ -963,12 +963,13 @@ Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm
       if(id==='claim'){
         const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
         const st=document.getElementById('claim-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
-        const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='✅ 缓存正常 · '+MOD_DATA[id].data.length+' 条 · '+ts}
       }
       if(id==='settle'){
         const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
         const st=document.getElementById('settle-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
       }
+      // 预渲染看板（隐藏状态下生成HTML，切换时直接显示）
+      dashRendered[id]=false;
       if(!cachedMod)cachedMod=id;
     }else{
       updateInfo(id);updateBadge(id);

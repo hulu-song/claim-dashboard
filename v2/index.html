@@ -619,6 +619,10 @@ function showDash(id){
   let noDeliveryN=0;const noDeliveryRows=[];const noDeliveryByStatus={};
   if(fm.status){data.forEach(r=>{const v=String(r[fm.status]||'').trim();if(v.includes('匹配未完成')||v.includes('匹配完成')){noDeliveryN++;noDeliveryRows.push(r);noDeliveryByStatus[v]=(noDeliveryByStatus[v]||0)+1}})}
 
+  // 结算单：最终支付费用（提前计算，drawCharts 需要）
+  let totalFinalPay=0;const finalPayBySup={};
+  if(fm.finalPay)data.forEach(r=>{const n=parseFloat(String(r[fm.finalPay]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFinalPay+=v;if(fm.supplier){const k=String(r[fm.supplier]||'(空)');finalPayBySup[k]=(finalPayBySup[k]||0)+v}});
+
   // 月度趋势
   let monthData={};
   data.forEach(r=>{
@@ -658,8 +662,6 @@ function showDash(id){
 
   // ── 结算单专用：四大模块 ──
   else if(id==='settle'){
-    // 计算结算单特有指标
-    let totalFinalPay=0;const finalPayBySup={};
     const fpField=fm.finalPay;
     if(fpField)data.forEach(r=>{const n=parseFloat(String(r[fpField]).replace(/[,，\s¥￥]/g,''));const v=isNaN(n)?0:n;totalFinalPay+=v;if(su){const k=String(r[su]||'(空)');finalPayBySup[k]=(finalPayBySup[k]||0)+v}});
 

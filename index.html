@@ -211,26 +211,16 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
   <!-- 索赔单 -->
   <div class="module" id="mod-claim">
-    <!-- 顶部栏：左侧标题 + 右侧三个按钮（从右到左：上传、下载、清空） -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
       <div>
         <h2 style="font-size:24px;font-weight:800;margin:0">📋 索赔单分析</h2>
-        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="claim-status">请上传数据开始分析</p>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="claim-status">请上传数据开始分析（数据仅当前会话有效）</p>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-r btn-sm" onclick="clearMod('claim')" title="清空所有数据">🗑️ 清空数据</button>
-        <button class="btn btn-ol btn-sm" onclick="dlCSV('claim')" id="btnDlCsv" disabled title="下载当前数据为CSV">📥 下载数据</button>
-        <div style="position:relative;display:inline-block">
-          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
-          <input type="file" id="fi-claim" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
-        </div>
+      <div style="position:relative;display:inline-block">
+        <div style="padding:10px 22px;background:var(--p);color:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
+        <input type="file" id="fi-claim" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
       </div>
     </div>
-    <!-- 缓存状态提示 -->
-    <div id="cache-debug" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--t3);margin-bottom:16px;display:none"></div>
-    <!-- 四大模块 -->
-    <div id="four-cards-claim"></div>
-    <!-- 看板 -->
     <div class="hidden" id="dash-claim"></div>
     <div class="detail-page" id="detail-claim"></div>
   </div>
@@ -240,15 +230,11 @@ tr:hover td{background:rgba(249,115,22,.04)}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
       <div>
         <h2 style="font-size:24px;font-weight:800;margin:0">💰 结算单分析</h2>
-        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="settle-status">请上传数据开始分析</p>
+        <p style="font-size:12px;color:var(--t3);margin-top:4px" id="settle-status">请上传数据开始分析（数据仅当前会话有效）</p>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="btn btn-r btn-sm" onclick="clearMod('settle')" title="清空所有数据">🗑️ 清空数据</button>
-        <button class="btn btn-ol btn-sm" onclick="dlCSV('settle')" id="btnDlCsvSettle" disabled title="下载CSV">📥 下载数据</button>
-        <div style="position:relative;display:inline-block">
-          <div style="padding:8px 18px;background:var(--p);color:#fff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
-          <input type="file" id="fi-settle" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
-        </div>
+      <div style="position:relative;display:inline-block">
+        <div style="padding:10px 22px;background:var(--p);color:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.3);display:inline-flex;align-items:center;gap:6px">📤 上传数据</div>
+        <input type="file" id="fi-settle" accept=".csv,.xlsx,.xls" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:10">
       </div>
     </div>
     <div id="dash-settle" class="hidden"></div>
@@ -425,97 +411,18 @@ function backToDash(modId){
 function detectField(heads,targets){const norm=heads.map(h=>h.replace(/[\s\(\)（）_\-]/g,'').toLowerCase());for(const t of targets){const tc=t.replace(/[\s\(\)（）_\-]/g,'').toLowerCase();const i=norm.findIndex(h=>h===tc||h.includes(tc));if(i!==-1)return heads[i]}return''}
 function detectAll(id,heads){const cfg=MODS[id].fields;const fm={};for(const[k,targets]of Object.entries(cfg))fm[k]=detectField(heads,targets);if(!fm.supplier){const i=heads.findIndex(h=>h.includes('供应'));if(i!==-1)fm.supplier=heads[i]}if(!fm.fee){const i=heads.findIndex(h=>h.includes('费用')||h.includes('金额'));if(i!==-1)fm.fee=heads[i]}if(!fm.region){const i=heads.findIndex(h=>h.includes('国家')||h.includes('地区')||h.includes('市场'));if(i!==-1)fm.region=heads[i]}if(!fm.faultType){const i=heads.findIndex(h=>h.includes('故障')||h.includes('问题')||h.includes('缺陷'));if(i!==-1)fm.faultType=heads[i]}return fm}
 
-// ── IndexedDB 缓存（支持大数据量） ──
-const DB_NAME='ClaimDashDB';
-const DB_VER=2;
-let db=null;
-
-function openDB(){
-  return new Promise((resolve,reject)=>{
-    if(db)return resolve(db);
-    const req=indexedDB.open(DB_NAME,DB_VER);
-    req.onupgradeneeded=e=>{
-      const db2=e.target.result;
-      if(!db2.objectStoreNames.contains('modules'))db2.createObjectStore('modules',{keyPath:'id'});
-    };
-    req.onsuccess=e=>{db=e.target.result;resolve(db)};
-    req.onerror=e=>{console.error('IndexedDB 打开失败:',e);reject(e.target.error)};
-  });
-}
-
-async function saveMod(id){
-  const md=MOD_DATA[id];if(!md||!md.data||!md.data.length)return;
-  const payload=JSON.stringify({d:md.data,h:md.heads,t:Date.now()});
-  // 优先 IndexedDB
-  try{
-    const d=await openDB();
-    const tx=d.transaction('modules','readwrite');
-    tx.objectStore('modules').put({id,data:md.data,heads:md.heads,ts:Date.now()});
-    tx.oncomplete=()=>console.log('[DB] 保存成功:',id,md.data.length+'条');
-  }catch(e){
-    // 回退 localStorage
-    try{localStorage.setItem('cd_'+id,payload);console.log('[LS] 回退保存:',id)}catch(e2){console.error('保存失败:',e2)}
-  }
-}
-
-async function loadMod(id){
-  // 先试 IndexedDB
-  try{
-    const d=await openDB();
-    const result=await new Promise((resolve,reject)=>{
-      const tx=d.transaction('modules','readonly');
-      const req=tx.objectStore('modules').get(id);
-      req.onsuccess=()=>resolve(req.result||null);
-      req.onerror=()=>reject(req.error);
-    });
-    if(result&&Array.isArray(result.data)&&result.data.length>0){
-      MOD_DATA[id]={data:result.data,heads:result.heads,fm:{}};
-      console.log('[DB] 加载成功:',id,result.data.length+'条');
-      return true;
-    }
-  }catch(e){console.warn('[DB] 加载失败，尝试 localStorage:',e)}
-  // 回退 localStorage
-  try{
-    const raw=localStorage.getItem('cd_'+id);
-    if(raw){const o=JSON.parse(raw);if(o&&Array.isArray(o.d)&&o.d.length>0){
-      MOD_DATA[id]={data:o.d,heads:o.h,fm:{}};
-      console.log('[LS] 回退加载成功:',id,o.d.length+'条');
-      // 迁移到 IndexedDB
-      saveMod(id);
-      return true;
-    }}
-  }catch(e){}
-  return false;
-}
-
-async function clearModFromDB(id){
-  try{const d=await openDB();const tx=d.transaction('modules','readwrite');tx.objectStore('modules').delete(id)}catch(e){}
-  try{localStorage.removeItem('cd_'+id)}catch(e){}
-}
+// ── 清空模块数据 ──
 function clearMod(id){
-  clearModFromDB(id);
   MOD_DATA[id]={data:[],heads:[],fm:{}};
   dashRendered[id]=false;
   destroyModCharts(id);
-  document.getElementById('cache-'+id).classList.add('hidden');
   document.getElementById('dash-'+id).classList.add('hidden');
   document.getElementById('dash-'+id).innerHTML='';
   const dp=document.getElementById('detail-'+id);
   if(dp){dp.style.display='none';dp.classList.remove('active');dp.innerHTML=''}
   updateInfo(id);updateBadge(id);
-  if(id==='claim'){
-    const st=document.getElementById('claim-status');if(st)st.textContent='请上传数据开始分析';
-    const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=true;
-    const dbg=document.getElementById('cache-debug');if(dbg)dbg.innerHTML='📭 暂无缓存数据';
-  }
-  if(id==='settle'){
-    const st=document.getElementById('settle-status');if(st)st.textContent='请上传数据开始分析';
-    const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=true;
-  }
-  if(id==='overseas'){
-    const st=document.getElementById('overseas-status');if(st)st.textContent='请上传数据开始分析';
-    const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=true;
-  }
+  const stMap={claim:'claim-status',settle:'settle-status',overseas:'overseas-status'};
+  const st=document.getElementById(stMap[id]);if(st)st.textContent='请上传数据开始分析';
 }
 
 function setupUpload(id){
@@ -559,24 +466,19 @@ function parseCSV(id,text){
 }
 function splitLine(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}
 
-async function loadData(id,rows){
+function loadData(id,rows){
   if(!rows||!rows.length)return alert('无数据');
   const dash=document.getElementById('dash-'+id);
   try{
     const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
     MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-    // 重置渲染标记，销毁旧图表
     dashRendered[id]=false;
     destroyModCharts(id);
     if(dash)dash.innerHTML='';
     updateInfo(id);updateBadge(id);
-    await saveMod(id);
-    // 更新状态文字和下载按钮
-    const statusMap={claim:'claim-status',settle:'settle-status',overseas:'overseas-status'};
-    const dlMap={claim:'btnDlCsv',settle:'btnDlCsvSettle',overseas:'btnDlCsvOverseas'};
-    const st=document.getElementById(statusMap[id]);if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-    const dl=document.getElementById(dlMap[id]);if(dl)dl.disabled=false;
-    // 切换并渲染
+    // 更新状态文字
+    const stMap={claim:'claim-status',settle:'settle-status',overseas:'overseas-status'};
+    const st=document.getElementById(stMap[id]);if(st)st.textContent='已加载 '+rows.length+' 条数据';
     switchMod(id);
   }catch(e){
     console.error('loadData 失败:',e);
@@ -979,21 +881,9 @@ function buildTable(id,rows,isEmpty){
 function showEmptyMod(id){const md=MOD_DATA[id];if(!md)return;const rows=md.data.filter(r=>!r[md.fm.supplier]||String(r[md.fm.supplier]).trim()==='');if(!rows.length)return;document.getElementById('tc-'+id).textContent=rows.length+' 条未匹配供应商记录';buildTable(id,rows,true);document.querySelector('#mod-'+id+' .tbl-card').scrollIntoView({behavior:'smooth'})}
 
 // ── 导出 ──
-function dlCSV(id){const md=MOD_DATA[id];if(!md)return;const ec=v=>{const s=String(v??'');return/[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};const csv=md.heads.map(ec).join(',')+'\n'+md.data.map(r=>md.heads.map(h=>ec(r[h])).join(',')).join('\n');tg(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}),MODS[id].name+'.csv')}
-function dlXLSX(id){const md=MOD_DATA[id];if(!md)return;const ws=XLSX.utils.json_to_sheet(md.data,{header:md.heads});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,MODS[id].name);tg(new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),MODS[id].name+'.xlsx')}
+function dlCSV(id){const md=MOD_DATA[id];if(!md||!md.data.length)return;const ec=v=>{const s=String(v??'');return/[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};const csv=md.heads.map(ec).join(',')+'\n'+md.data.map(r=>md.heads.map(h=>ec(r[h])).join(',')).join('\n');tg(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}),MODS[id].name+'.csv')}
+function dlXLSX(id){const md=MOD_DATA[id];if(!md||!md.data.length)return;const ws=XLSX.utils.json_to_sheet(md.data,{header:md.heads});const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,MODS[id].name);tg(new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),MODS[id].name+'.xlsx')}
 function tg(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();URL.revokeObjectURL(a.href)}
-
-// ── 分享功能：下载带数据的独立HTML ──
-function dlStandalone(modId){
-  const md=MOD_DATA[modId];if(!md||!md.data.length)return alert('无数据可导出');
-  try{
-    const dataJson=JSON.stringify({mod:modId,d:md.data,h:md.heads}).replace(/<\/script>/gi,'<\\/script>');
-    const embedScript='<script>window.EMBED_DATA='+dataJson+';<\/script>';
-    const html='<!DOCTYPE html>'+document.documentElement.outerHTML.replace('</head>',embedScript+'</head>');
-    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='索赔看板-'+new Date().toISOString().slice(0,10)+'.html';a.click();URL.revokeObjectURL(a.href);
-  }catch(e){alert('导出失败: '+e.message)}
-}
 
 // ── 海外质保金知识库渲染 ──
 function renderOverseas(){
@@ -1038,51 +928,9 @@ function renderOverseas(){
 // ── 初始化 ──
 renderPolicyGrid();
 renderOverseas();
-let cachedMod='';
 
-// 优先检查内嵌数据
-if(window.EMBED_DATA&&window.EMBED_DATA.d&&window.EMBED_DATA.d.length){
-  const em=window.EMBED_DATA;
-  MOD_DATA[em.mod]={data:em.d,heads:em.h,fm:detectAll(em.mod,em.h)};
-  saveMod(em.mod);cachedMod=em.mod;
-}
-
-// 设置上传
+// 设置上传绑定
 Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm:{}}});
-
-// 异步加载 IndexedDB 缓存
-(async()=>{
-  for(const id of Object.keys(MODS)){
-    if(MOD_DATA[id]&&MOD_DATA[id].data&&MOD_DATA[id].data.length)continue;
-    const ok=await loadMod(id);
-    if(ok){
-      MOD_DATA[id].fm=detectAll(id,MOD_DATA[id].heads);
-      document.getElementById('cache-'+id).classList.remove('hidden');
-      const ts=new Date().toLocaleString('zh-CN');
-      document.getElementById('ct-'+id).textContent='缓存 · '+MOD_DATA[id].data.length+' 条';
-      updateInfo(id);updateBadge(id);
-      if(id==='claim'){
-        const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
-        const st=document.getElementById('claim-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
-      }
-      if(id==='settle'){
-        const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
-        const st=document.getElementById('settle-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
-      }
-      if(id==='overseas'){
-        const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=false;
-        const st=document.getElementById('overseas-status');if(st)st.textContent='已加载缓存数据 · '+MOD_DATA[id].data.length+' 条';
-      }
-      // 预渲染看板（隐藏状态下生成HTML，切换时直接显示）
-      dashRendered[id]=false;
-      if(!cachedMod)cachedMod=id;
-    }else{
-      updateInfo(id);updateBadge(id);
-      if(id==='claim'){const dbg=document.getElementById('cache-debug');if(dbg){dbg.style.display='block';dbg.innerHTML='📭 暂无缓存数据'}}
-    }
-  }
-  if(cachedMod)switchMod(cachedMod);
-})();
 </script>
 </body>
 </html>

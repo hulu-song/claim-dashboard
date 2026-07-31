@@ -267,10 +267,10 @@ tr:hover td{background:rgba(249,115,22,.04)}
 
     <!-- 四个图表：上2下2 -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px">
-      <div class="cc"><h3>🌐 全球主要市场质保成本占比</h3><div class="cs">基于行业公开数据估算</div><canvas id="ov-region"></canvas></div>
-      <div class="cc"><h3>📊 质保成本结构分布</h3><div class="cs">典型整车厂质保成本构成</div><canvas id="ov-cost"></canvas></div>
-      <div class="cc"><h3>⚡ 海外高频索赔故障类型 Top 10</h3><div class="cs">基于全球主要市场售后数据</div><canvas id="ov-fault"></canvas></div>
-      <div class="cc"><h3>📈 全球质保成本率趋势</h3><div class="cs">质保成本占营收比例（行业平均）</div><canvas id="ov-trend"></canvas></div>
+      <div class="cc" style="display:flex;flex-direction:column"><h3>🌐 全球主要市场质保成本占比</h3><div class="cs">基于行业公开数据估算 · <a href="https://www.ihs.com/" target="_blank" style="color:var(--p);text-decoration:none">IHS Markit ↗</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><canvas id="ov-region"></canvas></div></div>
+      <div class="cc" style="display:flex;flex-direction:column"><h3>📊 质保成本结构分布</h3><div class="cs">典型整车厂质保成本构成 · <a href="https://www.jdpower.com/" target="_blank" style="color:var(--p);text-decoration:none">J.D. Power ↗</a></div><div style="flex:1;display:flex;align-items:center;justify-content:center"><canvas id="ov-cost"></canvas></div></div>
+      <div class="cc" style="display:flex;flex-direction:column"><h3>⚡ 海外高频索赔故障类型 Top 10</h3><div class="cs">基于全球主要市场售后数据 · <a href="https://www.nhtsa.gov/recalls" target="_blank" style="color:var(--p);text-decoration:none">NHTSA ↗</a></div><div style="flex:1"><canvas id="ov-fault"></canvas></div></div>
+      <div class="cc" style="display:flex;flex-direction:column"><h3>📈 全球质保成本率趋势</h3><div class="cs">质保成本占营收比例（行业平均） · <a href="https://www.warrantyweek.com/" target="_blank" style="color:var(--p);text-decoration:none">Warranty Week ↗</a></div><div style="flex:1"><canvas id="ov-trend"></canvas></div></div>
     </div>
 
     <!-- 区域法规卡片 -->
@@ -283,7 +283,7 @@ tr:hover td{background:rgba(249,115,22,.04)}
     <!-- 成本优化建议 -->
     <div class="cc" id="ov-tips"></div>
 
-    <div class="ft">数据来源：行业公开报告、IHS Markit、J.D. Power、各国法规文件 · 仅供参考</div>
+    <div class="ft">数据来源：<a href="https://www.ihs.com/" target="_blank" style="color:var(--p);text-decoration:none">IHS Markit</a> · <a href="https://www.jdpower.com/" target="_blank" style="color:var(--p);text-decoration:none">J.D. Power</a> · <a href="https://www.nhtsa.gov/" target="_blank" style="color:var(--p);text-decoration:none">NHTSA</a> · <a href="https://www.warrantyweek.com/" target="_blank" style="color:var(--p);text-decoration:none">Warranty Week</a> · <a href="https://www.gov.cn/" target="_blank" style="color:var(--p);text-decoration:none">中国政府网</a> · <a href="https://eur-lex.europa.eu/" target="_blank" style="color:var(--p);text-decoration:none">EUR-Lex</a></div>
   </div>
 </main>
 
@@ -735,19 +735,22 @@ function tableHTML(id,name){return'<div class="tbl-card"><div class="th"><h3>�
 const CHART_OPTS={responsive:true,animation:{duration:300},plugins:{legend:{display:false}}};
 const SCALE_OPTS={scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(42,47,61,.3)'}}}};
 
-function drawBar(canvasId,labels,vals,label){
+function drawBar(canvasId,labels,vals,label,h){
   const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
+  if(h){cv.height=h;cv.style.height=h+'px'}
   chartInstances[canvasId]=new Chart(cv,{type:'bar',data:{labels,datasets:[{label,data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:CHART_COLORS.slice(0,labels.length),borderWidth:1,borderRadius:4}]},options:{...CHART_OPTS,...SCALE_OPTS}});
 }
-function drawDoughnut(canvasId,labels,vals){
+function drawDoughnut(canvasId,labels,vals,h){
   const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
+  if(h){cv.height=h;cv.style.height=h+'px'}
   chartInstances[canvasId]=new Chart(cv,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:CHART_BG.slice(0,labels.length),borderColor:'#181c26',borderWidth:2}]},options:{...CHART_OPTS,plugins:{legend:{position:'right',labels:{padding:10,usePointStyle:true}}}}});
 }
-function drawLine(canvasId,labels,vals,label){
+function drawLine(canvasId,labels,vals,label,h){
   const cv=document.getElementById(canvasId);if(!cv)return;
   destroyChart(canvasId);
+  if(h){cv.height=h;cv.style.height=h+'px'}
   chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels,datasets:[{label,data:vals,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:4}]},options:{...CHART_OPTS,...SCALE_OPTS}});
 }
 
@@ -1003,13 +1006,14 @@ function renderOverseas(){
   ];
   document.getElementById('ov-kpi').innerHTML=kpiData.map(k=>`<div class="four-card"><div class="fc-icon">${k.icon}</div><div class="fc-label">${k.label}</div><div class="fc-val">${k.val}</div><div class="fc-detail">${k.detail}</div></div>`).join('');
 
-  // 区域分布
+  // 图表绘制（统一尺寸）
   setTimeout(()=>{
-    drawDoughnut('ov-region',['北美 (USA/Canada)','欧洲 (EU/UK)','中国','亚太 (日韩东南亚)','拉美','中东/非洲'],[32,28,20,12,5,3]);
-    drawDoughnut('ov-cost',['动力总成 (发动机/变速器/电池)','电子电器系统','底盘/悬挂','车身/内外饰','空调/热管理系统','其他'],[28,22,18,15,10,7]);
-    drawBar('ov-fault',['发动机异响/抖动','变速器顿挫/打滑','空调系统故障','电池衰减/故障','电子模块失灵','制动系统异响','悬挂异响/漏油','车机系统死机','车灯故障','漏水/异响'],[18,15,13,12,11,9,8,7,4,3],'占比(%)');
-    drawLine('ov-trend',['2018','2019','2020','2021','2022','2023','2024','2025E'],[2.1,2.3,2.5,2.8,3.2,3.0,2.8,2.6],'质保成本率(%)');
-  },100);
+    const pieH=320;
+    drawDoughnut('ov-region',['北美','欧洲','中国','亚太','拉美','中东/非洲'],[32,28,20,12,5,3],pieH);
+    drawDoughnut('ov-cost',['动力总成','电子电器','底盘/悬挂','车身/内外饰','空调/热管理','其他'],[28,22,18,15,10,7],pieH);
+    drawBar('ov-fault',['发动机异响','变速器顿挫','空调故障','电池衰减','电子模块失灵','制动异响','悬挂漏油','车机死机','车灯故障','漏水异响'],[18,15,13,12,11,9,8,7,4,3],'占比(%)',320);
+    drawLine('ov-trend',['2018','2019','2020','2021','2022','2023','2024','2025E'],[2.1,2.3,2.5,2.8,3.2,3.0,2.8,2.6],'成本率(%)',320);
+  },150);
 
   // 区域法规卡片
   const regions=[

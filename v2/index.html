@@ -384,11 +384,15 @@ function switchMod(id){
     dash.classList.remove('hidden');
     const dp=document.getElementById('detail-'+id);
     if(dp){dp.style.display='none';dp.classList.remove('active')}
-    // 只在首次或数据变化时渲染，避免重复绘制图表
+    // 只在首次渲染，之后切换只显示/隐藏
     if(!dashRendered[id]){
       dashRendered[id]=true;
-      setTimeout(()=>{try{showDash(id)}catch(e){console.error('渲染失败:',e)}},300);
+      // 销毁旧图表再渲染
+      destroyModCharts(id);
+      setTimeout(()=>{try{showDash(id)}catch(e){console.error('渲染失败:',e)}},100);
     }
+  }else{
+    dash.classList.add('hidden');
   }
 }
 
@@ -550,23 +554,18 @@ async function loadData(id,rows){
   try{
     const heads=Object.keys(rows[0]);const fm=detectAll(id,heads);
     MOD_DATA[id]={data:rows,heads:heads,fm:fm};
-    dashRendered[id]=false;// 重置，强制重新渲染
-    if(dash){dash.innerHTML='<div style="padding:40px;text-align:center;color:var(--t2)">⏳ 数据加载中...</div>';dash.classList.remove('hidden')}
+    // 重置渲染标记，销毁旧图表
+    dashRendered[id]=false;
+    destroyModCharts(id);
+    if(dash)dash.innerHTML='';
     updateInfo(id);updateBadge(id);
     await saveMod(id);
-    if(id==='claim'){
-      const st=document.getElementById('claim-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-      const dl=document.getElementById('btnDlCsv');if(dl)dl.disabled=false;
-    }
-    if(id==='settle'){
-      const st=document.getElementById('settle-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-      const dl=document.getElementById('btnDlCsvSettle');if(dl)dl.disabled=false;
-    }
-    if(id==='overseas'){
-      const st=document.getElementById('overseas-status');if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
-      const dl=document.getElementById('btnDlCsvOverseas');if(dl)dl.disabled=false;
-    }
-    // 切换到当前模块并渲染
+    // 更新状态文字和下载按钮
+    const statusMap={claim:'claim-status',settle:'settle-status',overseas:'overseas-status'};
+    const dlMap={claim:'btnDlCsv',settle:'btnDlCsvSettle',overseas:'btnDlCsvOverseas'};
+    const st=document.getElementById(statusMap[id]);if(st)st.textContent='已加载 '+rows.length+' 条数据 · '+new Date().toLocaleString('zh-CN');
+    const dl=document.getElementById(dlMap[id]);if(dl)dl.disabled=false;
+    // 切换并渲染
     switchMod(id);
   }catch(e){
     console.error('loadData 失败:',e);

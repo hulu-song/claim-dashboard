@@ -189,7 +189,8 @@ tr:hover td{background:rgba(249,115,22,.04)}
     <div class="nav-item active" data-mod="warranty" onclick="switchMod('warranty')"><span class="ni-icon">🛡️</span><span class="ni-text">三包政策</span></div>
     <div class="nav-item" data-mod="claim" onclick="switchMod('claim')"><span class="ni-icon">📋</span><span class="ni-text">索赔单</span><span class="ni-badge" id="badge-claim">—</span></div>
     <div class="nav-item" data-mod="settle" onclick="switchMod('settle')"><span class="ni-icon">💰</span><span class="ni-text">结算单</span><span class="ni-badge" id="badge-settle">—</span></div>
-    <div class="nav-item" data-mod="overseas" onclick="switchMod('overseas')"><span class="ni-icon">🌍</span><span class="ni-text">海外质保金</span><span class="ni-badge" id="badge-overseas">—</span></div>
+    <div class="nav-item" data-mod="overseas" onclick="switchMod('overseas')"><span class="ni-icon">🌍</span><span class="ni-text">海外质保金</span></div>
+    <div class="nav-item" data-mod="process" onclick="switchMod('process')"><span class="ni-icon">🔄</span><span class="ni-text">二次索赔流程</span></div>
   </div>
   <div class="nav-ft">数据仅在浏览器本地处理<br>不会上传到任何服务器</div>
 </nav>
@@ -239,6 +240,34 @@ tr:hover td{background:rgba(249,115,22,.04)}
     </div>
     <div id="dash-settle" class="hidden"></div>
     <div class="detail-page" id="detail-settle"></div>
+  </div>
+
+  <!-- 二次索赔流程 -->
+  <div class="module" id="mod-process">
+    <div style="margin-bottom:20px">
+      <h2 style="font-size:24px;font-weight:800;margin:0">🔄 二次索赔下发流程</h2>
+      <p style="font-size:12px;color:var(--t3);margin-top:4px">完整的索赔单从下发到结算的全流程说明</p>
+    </div>
+
+    <!-- 流程时间线 -->
+    <div class="cc" style="margin-bottom:20px">
+      <h3>📅 索赔单全生命周期</h3>
+      <div class="cs">从下发到结算的关键节点与时间窗口</div>
+      <div id="flow-timeline" style="margin-top:16px"></div>
+    </div>
+
+    <!-- 关键节点详情 -->
+    <div class="g2" id="flow-details"></div>
+
+    <!-- 注意事项 -->
+    <div class="cc" id="flow-notes" style="margin-bottom:20px"></div>
+
+    <!-- 时间轴图 -->
+    <div class="cc" style="margin-bottom:20px">
+      <h3>⏰ 月度索赔周期时间轴</h3>
+      <div class="cs">每月循环的关键时间节点</div>
+      <canvas id="flow-chart" style="margin-top:14px"></canvas>
+    </div>
   </div>
 
   <!-- 海外质保金 -->
@@ -925,9 +954,129 @@ function renderOverseas(){
   </div>`;
 }
 
+// ── 二次索赔流程 ──
+function renderProcess(){
+  // 流程步骤
+  const steps=[
+    {icon:'📋',title:'索赔单下发',time:'每月26日 ~ 次月5日',color:'#f97316',
+     desc:'每月月底26日开始到下月月初1/5号左右，小米陆续下发索赔单。此时供应商系统中索赔单状态为「已下发」。',
+     action:'供应商登录系统查看新下发的索赔单'},
+    {icon:'📦',title:'供应商提交取件',time:'收到索赔单后按需',color:'#3b82f6',
+     desc:'供应商按需在系统中提交取件申请。提交取件前需要先确认索赔单，如对索赔单有疑问，可先不确认、不取货，联系QE/SQE沟通。',
+     action:'确认索赔单 → 提交取件申请'},
+    {icon:'✅',title:'索赔单确认',time:'手动确认 / 1个月后自动确认',color:'#16a34a',
+     desc:'供应商手动确认索赔单。如供应商未确认，索赔单下发一个自然月后系统将自动确认。确认后进入结算流程。',
+     action:'供应商手动点击确认，或等待系统自动确认'},
+    {icon:'💰',title:'生成结算单',time:'每月1日 / 15日',color:'#8b5cf6',
+     desc:'每月1号和15号系统自动生成结算单。结算单基于已确认的索赔单生成，包含应付金额等信息。',
+     action:'系统自动生成，供应商可在系统中查看'},
+    {icon:'📝',title:'结算单确认',time:'生成后15个自然日',color:'#0ea5e9',
+     desc:'结算单生成后，供应商有15个自然日进行确认。确认后小米内部走付款流程。',
+     action:'供应商确认结算单，或在期限内提出异议'}
+  ];
+
+  // 渲染时间线
+  let tlHTML='<div style="position:relative;padding:0 0 0 40px">';
+  steps.forEach((s,i)=>{
+    const isLast=i===steps.length-1;
+    tlHTML+=`<div style="position:relative;margin-bottom:0;padding-bottom:${isLast?0:28}px">
+      <div style="position:absolute;left:-40px;top:4px;width:28px;height:28px;border-radius:50%;background:${s.color};display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:800;z-index:1">${i+1}</div>
+      ${!isLast?`<div style="position:absolute;left:-27px;top:32px;bottom:0;width:2px;background:linear-gradient(${s.color},${steps[i+1].color})"></div>`:''}
+      <div style="background:var(--card2);border:1px solid var(--border);border-left:4px solid ${s.color};border-radius:10px;padding:16px 18px;margin-left:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span style="font-size:22px">${s.icon}</span>
+          <span style="font-size:16px;font-weight:700">${s.title}</span>
+          <span style="font-size:11px;background:rgba(249,115,22,.1);color:var(--p);padding:2px 10px;border-radius:8px;font-weight:600;margin-left:auto">${s.time}</span>
+        </div>
+        <div style="font-size:13px;color:var(--t2);line-height:1.8;margin-bottom:6px">${s.desc}</div>
+        <div style="font-size:12px;color:var(--p);font-weight:600">→ ${s.action}</div>
+      </div>
+    </div>`;
+  });
+  tlHTML+='</div>';
+  document.getElementById('flow-timeline').innerHTML=tlHTML;
+
+  // 关键节点详情
+  document.getElementById('flow-details').innerHTML=`
+    <div class="cc"><h3>⚠️ 关键提醒</h3><div class="cs">供应商必须注意的时间节点</div>
+      <div style="margin-top:12px">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:20px">⏰</span>
+          <div><div style="font-weight:700;margin-bottom:2px">月底26日 ~ 月初5日</div><div style="font-size:12px;color:var(--t2)">索赔单陆续下发期间，及时登录系统查看</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:20px">📅</span>
+          <div><div style="font-weight:700;margin-bottom:2px">1个自然月</div><div style="font-size:12px;color:var(--t2)">索赔单下发后，供应商有1个月时间处理。超时系统自动确认</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:20px">💰</span>
+          <div><div style="font-weight:700;margin-bottom:2px">每月1日 / 15日</div><div style="font-size:12px;color:var(--t2)">结算单生成日，基于已确认索赔单自动生成</div></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0">
+          <span style="font-size:20px">🔒</span>
+          <div><div style="font-weight:700;margin-bottom:2px">结算单确认后</div><div style="font-size:12px;color:var(--t2)">小米内部无法走逆向流程，务必在确认前核实</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cc"><h3>📞 问题处理流程</h3><div class="cs">遇到问题时的正确处理方式</div>
+      <div style="margin-top:12px">
+        <div style="background:var(--pl);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;line-height:1.8">
+          <b>1. 索赔单有疑问</b> → 先不确认、不取货 → 在群里反馈 → QE/SQE确认问题 → 联系我处理索赔单
+        </div>
+        <div style="background:var(--pl);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:13px;line-height:1.8">
+          <b>2. 需要调整费用</b> → 生成结算单后走申诉流程 → 内部走审批流（流程复杂）
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.8;color:#991b1b">
+          <b>3. 结算单确认后</b> → 小米内部无法走逆向流程 → 务必在确认前仔细核实金额
+        </div>
+      </div>
+    </div>`;
+
+  // 注意事项
+  document.getElementById('flow-notes').innerHTML=`<h3>📌 重要注意事项</h3><div class="cs">务必仔细阅读</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:14px">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px"><div style="font-weight:700;margin-bottom:4px;color:#dc2626">⚠️ 及时处理</div><div style="font-size:12px;color:var(--t2);line-height:1.7">索赔单下发后有一个月处理时间，有问题及时反馈，不要等到自动确认</div></div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px"><div style="font-weight:700;margin-bottom:4px;color:#f97316">📋 先确认再取货</div><div style="font-size:12px;color:var(--t2);line-height:1.7">提交取件前需先确认索赔单，有疑问先沟通再操作</div></div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px"><div style="font-weight:700;margin-bottom:4px;color:#2563eb">💬 群内反馈</div><div style="font-size:12px;color:var(--t2);line-height:1.7">有问题在群里反馈，QE/SQE会确认并协助处理</div></div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px"><div style="font-weight:700;margin-bottom:4px;color:#16a34a">✅ 结算前核实</div><div style="font-size:12px;color:var(--t2);line-height:1.7">结算单确认后无法逆向，务必在确认前核实金额和明细</div></div>
+    </div>`;
+
+  // 月度周期图表
+  setTimeout(()=>{
+    const cv=document.getElementById('flow-chart');if(!cv)return;
+    const W=cv.parentElement.clientWidth-40;
+    cv.width=W;cv.height=200;
+    const ctx=cv.getContext('2d');ctx.clearRect(0,0,W,200);
+    // 时间轴
+    const y=100,padL=60,padR=20;
+    const segW=(W-padL-padR)/31;
+    ctx.strokeStyle='#e7e0d8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    // 日期标记
+    const days=['1','','','','5','','','','','10','','','','','15','','','','','20','','','','','25','','','','','26','','','30/31'];
+    days.forEach((d,i)=>{if(!d)return;const x=padL+i*segW;ctx.fillStyle='#78716c';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(d,x,y+18);ctx.strokeStyle='#d6ccc2';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x,y+4);ctx.stroke()});
+    // 区间色块
+    const drawRange=(start,end,color,label)=>{const x1=padL+start*segW,x2=padL+end*segW;ctx.fillStyle=color+'30';ctx.fillRect(x1,y-20,x2-x1,14);ctx.fillStyle=color;ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText(label,x1+(x2-x1)/2,y-10)};
+    drawRange(25,35,'#f97316','索赔单下发');
+    drawRange(0,5,'#3b82f6','月初下发');
+    drawRange(0,0,'#16a34a','1号结算单');
+    drawRange(14,14,'#8b5cf6','15号结算单');
+    drawRange(25,35,'#f97316','供应商处理期');
+    // 标记点
+    const drawDot=(day,color)=>{const x=padL+day*segW;ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke()};
+    drawDot(1,'#16a34a');drawDot(15,'#8b5cf6');drawDot(26,'#f97316');
+    // 图例
+    const ly=170;ctx.font='11px sans-serif';ctx.textAlign='left';
+    ctx.fillStyle='#f97316';ctx.fillRect(padL,ly,12,12);ctx.fillStyle='#1a1a2e';ctx.fillText('索赔单下发/处理期',padL+18,ly+10);
+    ctx.fillStyle='#16a34a';ctx.fillRect(padL+140,ly,12,12);ctx.fillText('1号生成结算单',padL+158,ly+10);
+    ctx.fillStyle='#8b5cf6';ctx.fillRect(padL+280,ly,12,12);ctx.fillText('15号生成结算单',padL+298,ly+10);
+  },150);
+}
+
 // ── 初始化 ──
 renderPolicyGrid();
 renderOverseas();
+renderProcess();
 
 // 设置上传绑定
 Object.keys(MODS).forEach(id=>{setupUpload(id);MOD_DATA[id]={data:[],heads:[],fm:{}}});
